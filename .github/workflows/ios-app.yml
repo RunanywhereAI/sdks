@@ -64,13 +64,13 @@ jobs:
           -resultBundlePath TestResults.xcresult
           
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ios-app-build
         path: examples/ios/RunAnywhereAI/build/Build/Products/
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: ios-app-test-results

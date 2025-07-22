@@ -48,7 +48,7 @@ jobs:
           -derivedDataPath build
           
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ios-sdk-build
         path: sdk/runanywhere-swift/build/Build/Products/

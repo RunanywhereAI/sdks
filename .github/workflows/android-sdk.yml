@@ -28,7 +28,7 @@ jobs:
         distribution: 'temurin'
         
     - name: Cache Gradle packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.gradle/caches
@@ -45,7 +45,7 @@ jobs:
       run: ./gradlew lint
       
     - name: Upload lint results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: android-sdk-lint-results
@@ -60,13 +60,13 @@ jobs:
       run: ./gradlew test
       
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: android-sdk-build
         path: sdk/runanywhere-android/build/outputs/aar/*.aar
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: android-sdk-test-results

@@ -30,7 +30,7 @@ jobs:
         distribution: 'temurin'
         
     - name: Cache Gradle packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.gradle/caches
@@ -53,7 +53,7 @@ jobs:
       run: ./gradlew :app:lint
       
     - name: Upload lint results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: android-app-lint-results
@@ -68,13 +68,13 @@ jobs:
       run: ./gradlew :app:testDebugUnitTest
       
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: android-app-debug-apk
         path: examples/android/RunAnywhereAI/app/build/outputs/apk/debug/*.apk
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: android-app-test-results
