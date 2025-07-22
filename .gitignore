@@ -85,6 +85,9 @@ iOSInjectionProject/
 *.swo
 *~
 
+# Claude
+.claude/settings.local.json
+
 # Temporary files
 *.tmp
 *.temp

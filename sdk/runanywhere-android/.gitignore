@@ -19,8 +19,11 @@ build/
 # Gradle files
 .gradle/
 gradle-app.setting
-!gradle-wrapper.jar
 .gradletasknamecache
+# Gradle wrapper files (uncomment if you want to track them)
+gradlew
+gradlew.bat
+gradle/
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -101,7 +104,6 @@ Thumbs.db
 
 # Package Files
 *.jar
-!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
