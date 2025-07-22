@@ -1,20 +1,20 @@
-name: iOS SDK Build
+name: iOS SDK CI
 
 on:
   push:
     branches: [ main ]
     paths:
       - 'sdk/runanywhere-swift/**'
-      - '.github/workflows/ios-sdk-build.yml'
+      - '.github/workflows/ios-sdk.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'sdk/runanywhere-swift/**'
-      - '.github/workflows/ios-sdk-build.yml'
+      - '.github/workflows/ios-sdk.yml'
 
 jobs:
-  build:
-    name: Build iOS SDK
+  lint-and-build:
+    name: Lint and Build iOS SDK
     runs-on: macos-latest
     
     steps:
@@ -24,15 +24,20 @@ jobs:
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_15.2.app
       
+    - name: Install SwiftLint
+      run: brew install swiftlint
+      
+    - name: Run SwiftLint
+      working-directory: ./sdk/runanywhere-swift
+      run: swiftlint
+      
     - name: Build Swift Package
       working-directory: ./sdk/runanywhere-swift
-      run: |
-        swift build -v
+      run: swift build -v
         
     - name: Run tests
       working-directory: ./sdk/runanywhere-swift
-      run: |
-        swift test -v
+      run: swift test -v
         
     - name: Build for iOS
       working-directory: ./sdk/runanywhere-swift

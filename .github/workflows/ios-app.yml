@@ -1,4 +1,4 @@
-name: iOS App Build
+name: iOS App CI
 
 on:
   push:
@@ -6,17 +6,17 @@ on:
     paths:
       - 'examples/ios/RunAnywhereAI/**'
       - 'sdk/runanywhere-swift/**'
-      - '.github/workflows/ios-app-build.yml'
+      - '.github/workflows/ios-app.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'examples/ios/RunAnywhereAI/**'
       - 'sdk/runanywhere-swift/**'
-      - '.github/workflows/ios-app-build.yml'
+      - '.github/workflows/ios-app.yml'
 
 jobs:
-  build:
-    name: Build iOS Example App
+  lint-and-build:
+    name: Lint and Build iOS Example App
     runs-on: macos-latest
     
     steps:
@@ -25,6 +25,13 @@ jobs:
       
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      
+    - name: Install SwiftLint
+      run: brew install swiftlint
+      
+    - name: Run SwiftLint
+      working-directory: ./examples/ios/RunAnywhereAI
+      run: swiftlint
       
     - name: Build SDK first
       working-directory: ./sdk/runanywhere-swift

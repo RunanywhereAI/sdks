@@ -1,20 +1,20 @@
-name: Android SDK Build
+name: Android SDK CI
 
 on:
   push:
     branches: [ main ]
     paths:
       - 'sdk/runanywhere-android/**'
-      - '.github/workflows/android-sdk-build.yml'
+      - '.github/workflows/android-sdk.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'sdk/runanywhere-android/**'
-      - '.github/workflows/android-sdk-build.yml'
+      - '.github/workflows/android-sdk.yml'
 
 jobs:
-  build:
-    name: Build Android SDK
+  lint-and-build:
+    name: Lint and Build Android SDK
     runs-on: ubuntu-latest
     
     steps:
@@ -40,6 +40,17 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x ./sdk/runanywhere-android/gradlew
       
+    - name: Run lint
+      working-directory: ./sdk/runanywhere-android
+      run: ./gradlew lint
+      
+    - name: Upload lint results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: android-sdk-lint-results
+        path: sdk/runanywhere-android/build/reports/lint-results-*.html
+        
     - name: Build SDK
       working-directory: ./sdk/runanywhere-android
       run: ./gradlew build

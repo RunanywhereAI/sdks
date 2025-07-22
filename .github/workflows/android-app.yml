@@ -1,4 +1,4 @@
-name: Android App Build
+name: Android App CI
 
 on:
   push:
@@ -6,17 +6,17 @@ on:
     paths:
       - 'examples/android/RunAnywhereAI/**'
       - 'sdk/runanywhere-android/**'
-      - '.github/workflows/android-app-build.yml'
+      - '.github/workflows/android-app.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'examples/android/RunAnywhereAI/**'
       - 'sdk/runanywhere-android/**'
-      - '.github/workflows/android-app-build.yml'
+      - '.github/workflows/android-app.yml'
 
 jobs:
-  build:
-    name: Build Android Example App
+  lint-and-build:
+    name: Lint and Build Android Example App
     runs-on: ubuntu-latest
     
     steps:
@@ -48,6 +48,17 @@ jobs:
       working-directory: ./sdk/runanywhere-android
       run: ./gradlew build
       
+    - name: Run lint on app
+      working-directory: ./examples/android/RunAnywhereAI
+      run: ./gradlew :app:lint
+      
+    - name: Upload lint results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: android-app-lint-results
+        path: examples/android/RunAnywhereAI/app/build/reports/lint-results-*.html
+        
     - name: Build Example App
       working-directory: ./examples/android/RunAnywhereAI
       run: ./gradlew :app:assembleDebug
