@@ -3,7 +3,9 @@
     "allow": [
       "Bash(ls:*)",
       "Bash(git add:*)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
