@@ -19,6 +19,9 @@ build/
 
 # Gradle files
 .gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
 
 # Local configuration file (sdk path, etc)
 local.properties
@@ -38,6 +41,16 @@ captures/
 # IntelliJ
 *.iml
 .idea/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/misc.xml
 
 # Keystore files
 *.jks
@@ -65,6 +78,16 @@ fastlane/readme.md
 # Android Profiling
 *.hprof
 
+# Version control
+vcs.xml
+
+# lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+lint/reports/
+
 # OS-specific files
 .DS_Store
 .DS_Store?
@@ -73,3 +96,22 @@ fastlane/readme.md
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Kotlin
+.kotlin/
+
+# Package Files
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs
+hs_err_pid*
+
+# Detekt
+detekt.sarif
