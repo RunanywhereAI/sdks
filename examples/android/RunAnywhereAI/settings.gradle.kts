@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "RunAnywhereAI"
 include(":app")
-include(":runanywhere-android")
+include(":sdk:runanywhere-android")
+project(":sdk:runanywhere-android").projectDir = file("../../../sdk/runanywhere-android")
