@@ -1,0 +1,36 @@
+name: iOS App Lint
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'examples/ios/RunAnywhereAI/**'
+      - '.github/workflows/ios-app-lint.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'examples/ios/RunAnywhereAI/**'
+      - '.github/workflows/ios-app-lint.yml'
+
+jobs:
+  lint:
+    name: Lint iOS Example App
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install SwiftLint
+      run: brew install swiftlint
+      
+    - name: Run SwiftLint
+      working-directory: ./examples/ios/RunAnywhereAI
+      run: swiftlint
+      
+    - name: Upload SwiftLint results
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: ios-app-swiftlint-results
+        path: examples/ios/RunAnywhereAI/.swiftlint.yml

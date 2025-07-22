@@ -1,0 +1,49 @@
+name: iOS SDK Build
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'sdk/runanywhere-swift/**'
+      - '.github/workflows/ios-sdk-build.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'sdk/runanywhere-swift/**'
+      - '.github/workflows/ios-sdk-build.yml'
+
+jobs:
+  build:
+    name: Build iOS SDK
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      
+    - name: Build Swift Package
+      working-directory: ./sdk/runanywhere-swift
+      run: |
+        swift build -v
+        
+    - name: Run tests
+      working-directory: ./sdk/runanywhere-swift
+      run: |
+        swift test -v
+        
+    - name: Build for iOS
+      working-directory: ./sdk/runanywhere-swift
+      run: |
+        xcodebuild build \
+          -scheme RunAnywhere \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+          -derivedDataPath build
+          
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ios-sdk-build
+        path: sdk/runanywhere-swift/build/Build/Products/
