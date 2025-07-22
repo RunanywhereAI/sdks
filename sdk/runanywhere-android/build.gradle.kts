@@ -30,6 +30,12 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+    lint {
+        abortOnError = true
+        checkDependencies = true
+        warningsAsErrors = true
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {

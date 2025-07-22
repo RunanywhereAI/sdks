@@ -37,6 +37,12 @@ android {
     buildFeatures {
         compose = true
     }
+    lint {
+        abortOnError = true
+        checkDependencies = true
+        warningsAsErrors = true
+        baseline = file("lint-baseline.xml")
+    }
 }
 
 dependencies {

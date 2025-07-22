@@ -1,0 +1,66 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+
+  # Android Lint for SDK
+  - repo: local
+    hooks:
+      - id: android-sdk-lint
+        name: Android SDK Lint
+        entry: bash -c 'cd sdk/runanywhere-android && ./gradlew lint'
+        language: system
+        files: ^sdk/runanywhere-android/.*\.(kt|kts|java|xml)$
+        pass_filenames: false
+
+  # Android Lint for App
+  - repo: local
+    hooks:
+      - id: android-app-lint
+        name: Android App Lint
+        entry: bash -c 'cd examples/android/RunAnywhereAI && ./gradlew :app:lint'
+        language: system
+        files: ^examples/android/RunAnywhereAI/.*\.(kt|kts|java|xml)$
+        pass_filenames: false
+
+  # SwiftLint for iOS SDK
+  - repo: local
+    hooks:
+      - id: ios-sdk-swiftlint
+        name: iOS SDK SwiftLint
+        entry: bash -c 'cd sdk/runanywhere-swift && if which swiftlint >/dev/null; then swiftlint; else echo "SwiftLint not installed"; exit 1; fi'
+        language: system
+        files: ^sdk/runanywhere-swift/.*\.swift$
+        pass_filenames: false
+
+  # SwiftLint for iOS App
+  - repo: local
+    hooks:
+      - id: ios-app-swiftlint
+        name: iOS App SwiftLint
+        entry: bash -c 'cd examples/ios/RunAnywhereAI && if which swiftlint >/dev/null; then swiftlint; else echo "SwiftLint not installed"; exit 1; fi'
+        language: system
+        files: ^examples/ios/RunAnywhereAI/.*\.swift$
+        pass_filenames: false
+
+# Configuration
+default_language_version:
+  python: python3
+
+# Skip these hooks during CI
+ci:
+  skip:
+    - android-sdk-lint
+    - android-app-lint
+    - ios-sdk-swiftlint
+    - ios-app-swiftlint
