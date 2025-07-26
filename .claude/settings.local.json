@@ -8,7 +8,8 @@
       "Bash(mkdir:*)",
       "Bash(touch:*)",
       "Bash(swift build)",
-      "Bash(swift test)"
+      "Bash(swift test)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
