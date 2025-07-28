@@ -244,7 +244,7 @@ We especially welcome contributions in these areas:
 - **General questions**: Open a GitHub Discussion
 - **Bug reports**: Create an issue using the bug report template
 - **Feature requests**: Create an issue using the feature request template
-- **Security issues**: Email security@runanywhere.com (do not create public issues)
+- **Security issues**: Email security@runanywhere.ai (do not create public issues)
 
 ## 🙏 Recognition
 
