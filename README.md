@@ -1,6 +1,6 @@
 # RunAnywhere SDKs
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Android SDK CI](https://github.com/your-org/runanywhere-sdks/actions/workflows/android-sdk.yml/badge.svg)](https://github.com/your-org/runanywhere-sdks/actions/workflows/android-sdk.yml)
 [![iOS SDK CI](https://github.com/your-org/runanywhere-sdks/actions/workflows/ios-sdk.yml/badge.svg)](https://github.com/your-org/runanywhere-sdks/actions/workflows/ios-sdk.yml)
 
@@ -142,7 +142,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 🏢 About RunAnywhere
 
