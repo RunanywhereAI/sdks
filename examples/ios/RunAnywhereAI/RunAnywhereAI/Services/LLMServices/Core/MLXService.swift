@@ -17,46 +17,86 @@ import MLXNN
 #if canImport(MLXRandom)
 import MLXRandom
 #endif
+#if canImport(MLXLMCommon)
+import MLXLMCommon
+#endif
 
 // MARK: - MLX Model Wrapper
 
-private struct MLXModelWrapper {
-    let modelPath: String
-    let configPath: String?
-    let weightsPath: String?
-    let tokenizerPath: String?
-
-    // In real implementation, these would be MLX types:
-    // let model: LLMModel
-    // let tokenizer: Tokenizer
+private class MLXModelWrapper {
+    var modelPath: String
+    var model: Any? // Will hold the actual MLX model
+    var tokenizer: Any? // Will hold the actual MLX tokenizer
+    
+    // MLXLMCommon types would go here when available
 
     init(modelDirectory: String) throws {
         self.modelPath = modelDirectory
         
         // Check if it's a directory or a single file
         var isDirectory: ObjCBool = false
-        FileManager.default.fileExists(atPath: modelDirectory, isDirectory: &isDirectory)
+        guard FileManager.default.fileExists(atPath: modelDirectory, isDirectory: &isDirectory) else {
+            throw LLMError.modelNotFound
+        }
         
-        if isDirectory.boolValue {
-            // It's a directory, look for standard files
-            self.configPath = "\(modelDirectory)/config.json"
-            self.weightsPath = "\(modelDirectory)/weights.safetensors"
-            self.tokenizerPath = "\(modelDirectory)/tokenizer.json"
-            
-            // At minimum, we need config.json
-            if !FileManager.default.fileExists(atPath: configPath!) {
-                throw LLMError.modelNotFound
-            }
-        } else {
-            // It's a single file - this is a simplified model format
-            // For demo purposes, we'll accept this and create a minimal wrapper
-            self.configPath = nil
-            self.weightsPath = modelDirectory
-            self.tokenizerPath = nil
-            
-            print("MLX: Loading single-file model from \(modelDirectory)")
+        if !isDirectory.boolValue {
+            // For single files (like .safetensors), we need the parent directory
+            let url = URL(fileURLWithPath: modelDirectory)
+            let directory = url.deletingLastPathComponent().path
+            self.modelPath = directory
+            print("MLX: Using model directory: \(directory)")
         }
     }
+    
+    #if canImport(MLXLMCommon)
+    func loadModel() async throws {
+        NSLog("🚨 OLD MLXModelWrapper.loadModel() called with path: %@", modelPath)
+        // Load the model using MLX-LM
+        do {
+            let modelURL = URL(fileURLWithPath: modelPath)
+            
+            // Try to load using the model directory structure
+            // MLX models typically have config.json, tokenizer.json, and weights
+            let configURL = modelURL.appendingPathComponent("config.json")
+            let tokenizerURL = modelURL.appendingPathComponent("tokenizer.json")
+            
+            print("🚨 OLD wrapper checking for config.json at: \(configURL.path)")
+            
+            // Check if files exist
+            guard FileManager.default.fileExists(atPath: configURL.path) else {
+                print("🚨 OLD wrapper config.json NOT FOUND")
+                throw LLMError.custom("config.json not found in model directory")
+            }
+            
+            // For now, we'll store the paths - actual MLX-LM loading would happen here
+            // The real implementation would use MLX-LM's model loading API
+            print("✅ Found MLX model files:")
+            print("  - Config: \(configURL.path)")
+            print("  - Tokenizer: \(tokenizerURL.path)")
+            
+            // Note: Full MLX-LM integration would require:
+            // 1. Model architecture implementation (Llama, Mistral, etc.)
+            // 2. Weight loading from safetensors/npz files
+            // 3. Proper tokenizer loading
+            
+            throw LLMError.custom("""
+                MLX-LM model loading requires full implementation of:
+                1. Model architecture (Llama, Mistral, Gemma, etc.)
+                2. Weight loading from safetensors format
+                3. Tokenizer integration
+                
+                The MLXLMCommon package provides the foundation, but each model
+                architecture needs to be implemented separately.
+                
+                Consider using the llama.cpp framework for immediate functionality.
+                """)
+            
+        } catch {
+            print("❌ Failed to load MLX-LM model: \(error)")
+            throw error
+        }
+    }
+    #endif
 }
 
 private class MLXTokenizer {
@@ -111,8 +151,14 @@ private class MLXTokenizer {
     }
 
     func decode(_ tokens: [Int32]) -> String {
-        tokens.compactMap { tokenId in
-            inverseVocab[Int(tokenId)]?.replacingOccurrences(of: "▁", with: " ")
+        // Decode tokens using vocabulary
+        return tokens.compactMap { tokenId in
+            // Look up token in vocabulary
+            if let word = inverseVocab[Int(tokenId)] {
+                return word.replacingOccurrences(of: "▁", with: " ")
+            }
+            // Unknown token
+            return "<unk>"
         }.joined(separator: "")
     }
 }
@@ -207,8 +253,10 @@ class MLXService: BaseLLMService {
     private var mlxModel: MLXModelWrapper?
     private var tokenizer: MLXTokenizer?
     private var realTokenizer: Tokenizer?  // Real tokenizer from TokenizerFactory
+    private var modelImplementation: MLXModelImplementation?
 
     override func initialize(modelPath: String) async throws {
+        NSLog("🔥 MLX initialize called with modelPath: '%@'", modelPath)
         // Check if device supports MLX (A17 Pro/M3 or newer)
         guard isMLXSupported() else {
             throw LLMError.frameworkNotSupported
@@ -221,51 +269,82 @@ class MLXService: BaseLLMService {
             }
         }
 
-        // If modelPath is empty, try to find the model in the downloaded models
+        // Debug: Always check what we're starting with
+        print("MLX: Initial modelPath = '\(modelPath)'")
+        print("MLX: Current model info = \(currentModelInfo?.name ?? "none")")
+        
+        // Always check if config.json exists in the main Models directory first
+        let modelsDir = ModelManager.modelsDirectory
+        let mainConfigPath = modelsDir.appendingPathComponent("config.json")
+        
         var actualModelPath = modelPath
-        if modelPath.isEmpty || !FileManager.default.fileExists(atPath: modelPath) {
-            print("MLX: Model path empty or not found, searching for model...")
+        
+        print("MLX: Checking for config.json at: \(mainConfigPath.path)")
+        if FileManager.default.fileExists(atPath: mainConfigPath.path) {
+            print("MLX: ✅ Found config.json in main Models directory")
+            // Use the Models directory as the model path
+            actualModelPath = modelsDir.path
+        } else {
+            print("MLX: config.json not found in main Models directory")
             
-            // Look for the model in the Models directory
-            let modelManager = await MainActor.run { ModelManager.shared }
-            
-            // Try to find based on the current selection or path hints
-            var searchNames: [String] = []
-            
-            // Add names from currentModelInfo if available
-            if let modelInfo = currentModelInfo {
-                searchNames.append(modelInfo.name)
-                searchNames.append(modelInfo.name.replacingOccurrences(of: "-4bit", with: ""))
-                searchNames.append(modelInfo.name.replacingOccurrences(of: "4bit", with: ""))
+            // List contents of Models directory for debugging
+            do {
+                let contents = try FileManager.default.contentsOfDirectory(atPath: modelsDir.path)
+                print("MLX: Models directory contents: \(contents.joined(separator: ", "))")
+            } catch {
+                print("MLX: Could not read Models directory: \(error)")
             }
             
-            // Add names from the path
-            let pathComponents = modelPath.components(separatedBy: "/")
-            if let fileName = pathComponents.last {
-                searchNames.append(fileName)
-                searchNames.append(fileName.replacingOccurrences(of: "-4bit", with: ""))
-                searchNames.append(fileName.replacingOccurrences(of: "4bit", with: ""))
-            }
-            
-            // Search for the model
-            var foundPath: String? = nil
-            for searchName in searchNames {
-                let possiblePath = await modelManager.modelPath(for: searchName, framework: .mlx)
-                if FileManager.default.fileExists(atPath: possiblePath.path) {
-                    var isDir: ObjCBool = false
-                    if FileManager.default.fileExists(atPath: possiblePath.path, isDirectory: &isDir), isDir.boolValue {
-                        foundPath = possiblePath.path
-                        print("MLX: Found model directory at \(foundPath!)")
-                        break
+            // If modelPath is empty, try to find the model in the downloaded models
+            if modelPath.isEmpty || !FileManager.default.fileExists(atPath: modelPath) {
+                print("MLX: Model path empty or not found, searching for model...")
+                
+                // Look for the model in the Models directory
+                let modelManager = await MainActor.run { ModelManager.shared }
+                
+                // Try to find based on the current selection or path hints
+                var searchNames: [String] = []
+                
+                // Add names from currentModelInfo if available
+                if let modelInfo = currentModelInfo {
+                    searchNames.append(modelInfo.name)
+                    searchNames.append(modelInfo.name.replacingOccurrences(of: "-4bit", with: ""))
+                    searchNames.append(modelInfo.name.replacingOccurrences(of: "4bit", with: ""))
+                }
+                
+                // Add names from the path
+                let pathComponents = modelPath.components(separatedBy: "/")
+                if let fileName = pathComponents.last {
+                    searchNames.append(fileName)
+                    searchNames.append(fileName.replacingOccurrences(of: "-4bit", with: ""))
+                    searchNames.append(fileName.replacingOccurrences(of: "4bit", with: ""))
+                }
+                
+                print("MLX: Search names: \(searchNames)")
+                
+                // Search for the model
+                var foundPath: String? = nil
+                
+                for searchName in searchNames {
+                    // First try the framework-specific path
+                    let possiblePath = await modelManager.modelPath(for: searchName, framework: .mlx)
+                    print("MLX: Checking framework path: \(possiblePath.path)")
+                    if FileManager.default.fileExists(atPath: possiblePath.path) {
+                        var isDir: ObjCBool = false
+                        if FileManager.default.fileExists(atPath: possiblePath.path, isDirectory: &isDir), isDir.boolValue {
+                            foundPath = possiblePath.path
+                            print("MLX: Found model directory at \(foundPath!)")
+                            break
+                        }
                     }
                 }
-            }
-            
-            if let foundPath = foundPath {
-                actualModelPath = foundPath
-            } else {
-                print("MLX: Could not find model directory. Searched names: \(searchNames)")
-                throw LLMError.modelNotFound
+                
+                if let foundPath = foundPath {
+                    actualModelPath = foundPath
+                } else {
+                    print("MLX: Could not find model directory. Searched names: \(searchNames)")
+                    throw LLMError.modelNotFound
+                }
             }
         }
 
@@ -273,9 +352,14 @@ class MLXService: BaseLLMService {
         var isDirectory: ObjCBool = false
         FileManager.default.fileExists(atPath: actualModelPath, isDirectory: &isDirectory)
         
-        // For now, we'll accept both files and directories for MLX models
-        // This is a temporary workaround for the demo
-        print("MLX: Model path is \(isDirectory.boolValue ? "directory" : "file"): \(actualModelPath)")
+        // If actualModelPath points to a file, use its parent directory
+        if !isDirectory.boolValue {
+            let url = URL(fileURLWithPath: actualModelPath)
+            actualModelPath = url.deletingLastPathComponent().path
+            print("MLX: Model path was a file, using parent directory: \(actualModelPath)")
+        } else {
+            print("MLX: Model path is directory: \(actualModelPath)")
+        }
 
         // Update currentModelInfo if not already set
         if currentModelInfo == nil {
@@ -304,25 +388,38 @@ class MLXService: BaseLLMService {
         throw LLMError.frameworkNotSupported
         #endif
 
-        // Initialize wrapper and tokenizer
+        // Initialize wrapper
         mlxModel = try MLXModelWrapper(modelDirectory: actualModelPath)
-        if let model = mlxModel {
-            // Try to load real tokenizer using TokenizerFactory
-            realTokenizer = TokenizerFactory.createForFramework(.mlx, modelPath: modelPath)
-
-            if !(realTokenizer is BaseTokenizer) {
-                print("✅ Loaded real tokenizer for MLX model")
-            } else {
-                print("⚠️ Using basic tokenizer for MLX")
-            }
-
-            // Keep MLXTokenizer for compatibility if we have a tokenizer path
-            if let tokenizerPath = model.tokenizerPath, FileManager.default.fileExists(atPath: tokenizerPath) {
-                tokenizer = try MLXTokenizer(tokenizerPath: tokenizerPath)
-            } else {
-                // Use a basic tokenizer if no tokenizer file is available
+        
+        // Initialize the new model implementation
+        NSLog("MLX: Creating MLXModelImplementation with path: %@", actualModelPath)
+        modelImplementation = MLXModelImplementation(modelPath: actualModelPath)
+        
+        do {
+            // Try to load the model with the new implementation
+            NSLog("MLX: About to call modelImplementation.loadModel()")
+            try await modelImplementation?.loadModel()
+            print("✅ Successfully loaded MLX model with new implementation")
+            
+            // Keep the basic tokenizer for now
+            tokenizer = try MLXTokenizer(tokenizerPath: "")
+        } catch {
+            print("⚠️ New implementation load failed, falling back to MLXLMCommon: \(error)")
+            
+            #if canImport(MLXLMCommon)
+            // Load the actual MLX-LM model
+            if let wrapper = mlxModel {
+                try await wrapper.loadModel()
+                
+                // Also keep the basic tokenizer for compatibility
                 tokenizer = try MLXTokenizer(tokenizerPath: "")
             }
+            #else
+            // Fallback to basic tokenizer
+            if let model = mlxModel {
+                tokenizer = try MLXTokenizer(tokenizerPath: "")
+            }
+            #endif
         }
 
         print("MLX Model initialized successfully:")
@@ -351,79 +448,89 @@ class MLXService: BaseLLMService {
         options: GenerationOptions,
         onToken: @escaping (String) -> Void
     ) async throws {
-        guard isInitialized, let _ = mlxModel, let tokenizer = tokenizer else {
-            throw LLMError.notInitialized()
+        guard isInitialized, let _ = mlxModel, let _ = tokenizer else {
+            let error = LLMError.notInitialized()
+            print("❌ MLX Service not initialized: \(error)")
+            throw error
+        }
+
+        // Try using the new model implementation first
+        if let implementation = modelImplementation {
+            print("🚀 Using new MLX model implementation")
+            
+            do {
+                let stream = try await implementation.generate(
+                    prompt: prompt,
+                    maxTokens: options.maxTokens,
+                    temperature: options.temperature
+                )
+                
+                for try await token in stream {
+                    await MainActor.run {
+                        onToken(token)
+                    }
+                }
+                
+                return
+            } catch {
+                print("⚠️ New implementation failed: \(error)")
+                // Fall through to old error message
+            }
         }
 
         #if canImport(MLX)
-
-        do {
-            // REAL MLX implementation using Apple's MLX framework
-            print("🔥 Starting MLX inference with Apple Silicon optimization")
-
-            // Tokenize input
-            let inputTokens: [Int32]
-            if let realTokenizer = realTokenizer {
-                // Use real tokenizer
-                let intTokens = realTokenizer.encode(prompt)
-                inputTokens = intTokens.map { Int32($0) }
-                print("MLX: Processing \(inputTokens.count) input tokens (real tokenizer)")
-            } else {
-                // Fallback to basic tokenizer
-                inputTokens = tokenizer.encode(prompt)
-                print("MLX: Processing \(inputTokens.count) input tokens (basic tokenizer)")
-            }
-
-            // Create MLX arrays for computation
-            let inputArray = try createMLXArray(from: inputTokens)
-            print("✅ Created MLX array with shape: \(inputArray.shape)")
-
-            // Initialize generation state
-            var generatedTokens: [Int32] = []
-            var currentInput = inputArray
-
-            // MLX generation loop with GPU acceleration
-            for step in 0..<min(options.maxTokens, 20) { // Limit for demo
-                // Use MLX for efficient computation on Apple Silicon
-                let output = try await performMLXForward(input: currentInput, model: mlxModel!)
-
-                // Sample next token using MLX operations
-                let nextToken = try sampleMLXToken(from: output, temperature: options.temperature, step: step)
-                generatedTokens.append(nextToken)
-
-                // Decode token to text
-                let text: String
-                if let realTokenizer = realTokenizer {
-                    text = realTokenizer.decode([Int(nextToken)])
-                } else {
-                    text = tokenizer.decode([nextToken])
-                }
-
-                // Send to UI
-                await MainActor.run {
-                    onToken(text + " ")
-                }
-
-                // MLX is very fast on Apple Silicon
-                try await Task.sleep(nanoseconds: 40_000_000) // 40ms per token
-
-                // Update input for next iteration (autoregressive)
-                let allTokens = inputTokens + generatedTokens
-                currentInput = try createMLXArray(from: allTokens.suffix(512)) // Keep context window
-
-                // Check for completion
-                if text.contains(".") && step > 5 {
-                    break
-                }
-            }
-
-            print("✅ MLX inference completed with GPU acceleration")
-        } catch {
-            print("❌ MLX inference failed: \(error)")
-            throw error
-        }
+        // MLX framework is available
+        print("🔍 Checking MLX-LM integration status...")
+        
+        let error = LLMError.custom("""
+            MLX framework is detected but full LLM support requires additional implementation.
+            
+            Current status:
+            ✓ MLX framework: Available
+            ✓ Model path: \(mlxModel?.modelPath ?? "unknown")
+            ✓ MLXLMCommon: Available
+            ✗ Model implementation: Not complete
+            
+            MLX-LM requires model-specific implementations for:
+            • Llama models: LlamaModel class
+            • Mistral models: MistralModel class  
+            • Gemma models: GemmaModel class
+            • Phi models: PhiModel class
+            
+            Each model architecture needs:
+            1. Attention mechanism implementation
+            2. Feed-forward network implementation
+            3. Embedding and output layers
+            4. Safetensors weight loading
+            
+            This is a significant implementation effort. For immediate use:
+            • Use llama.cpp for GGUF models (fully implemented)
+            • Use Core ML for .mlpackage models (fully implemented)
+            
+            Device compatibility: \(isMLXSupported() ? "✓ Compatible with MLX" : "⚠️ Limited MLX support")
+            """)
+        
+        print("❌ MLX-LM model implementation not complete: \(error)")
+        throw error
         #else
-        throw LLMError.frameworkNotSupported
+        // MLX framework is not available in the current build
+        let error = LLMError.custom("""
+            MLX framework is not available or properly configured.
+            
+            To use MLX models:
+            1. Ensure you're running on Apple Silicon (A17 Pro/M3 or newer)
+            2. The MLX Swift package must be properly integrated
+            3. The model must be in MLX format (.safetensors)
+            
+            Current status:
+            - Model loaded: ✓
+            - Framework available: ✗
+            
+            Please try using a different framework like llama.cpp or ONNX Runtime.
+            """)
+        
+        print("❌ MLX framework not available: \(error)")
+        throw error
         #endif
     }
 
@@ -441,41 +548,22 @@ class MLXService: BaseLLMService {
     }
 
     private func performMLXForward(input: MLX.MLXArray, model: MLXModelWrapper) async throws -> MLX.MLXArray {
-        // In a real implementation, this would:
-        // 1. Load the actual MLX model weights
-        // 2. Perform forward pass through transformer layers
-        // 3. Return logits for next token prediction
-
-        // For demonstration, create a realistic MLX computation
-        let batchSize = input.shape[0]
-        let sequenceLength = input.shape[1]
-        let vocabSize = 32000
-
-        // Simulate transformer forward pass with MLX operations
-        // This would normally involve embeddings, attention, and MLP layers
-        let logits = MLX.ones([batchSize, sequenceLength, vocabSize])
-
-        return logits
+        // Real MLX model forward pass not implemented
+        throw LLMError.custom("""
+            MLX model inference is not fully implemented.
+            
+            Required implementation:
+            1. Load actual MLX model weights from safetensors file
+            2. Implement transformer forward pass
+            3. Return proper logits tensor
+            
+            This requires the full MLX-LM package integration.
+            """)
     }
 
     private func sampleMLXToken(from logits: MLX.MLXArray, temperature: Float, step: Int) throws -> Int32 {
-        // Use MLX for efficient sampling on Apple Silicon
-        // In real implementation, this would apply temperature and top-p sampling
-
-        let responseWords = [
-            "MLX", "provides", "efficient", "Apple", "Silicon", "computation", "with", "unified", "memory",
-            "architecture", "enabling", "fast", "inference", "on", "Mac", "and", "iOS", "devices",
-            "through", "optimized", "GPU", "acceleration", "and", "Metal", "Performance", "Shaders",
-            "integration", "for", "machine", "learning", "workloads", "."
-        ]
-
-        // Simulate temperature-based sampling
-        let baseIndex = step % responseWords.count
-        let variation = temperature > 0.8 ? Int.random(in: -2...2) : (temperature > 0.5 ? Int.random(in: -1...1) : 0)
-        let finalIndex = max(0, min(responseWords.count - 1, baseIndex + variation))
-
-        // Return token ID (simplified mapping)
-        return Int32(finalIndex + 100) // Offset to avoid special tokens
+        // Real MLX implementation required
+        throw LLMError.notImplemented
     }
     #endif
 
@@ -492,6 +580,7 @@ class MLXService: BaseLLMService {
 
         mlxModel = nil
         tokenizer = nil
+        modelImplementation = nil
         currentModelInfo = nil
         isInitialized = false
 
