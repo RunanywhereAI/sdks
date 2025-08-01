@@ -48,49 +48,88 @@ The RunAnywhere Swift SDK is designed with a modular, extensible architecture th
 
 ## Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Public API Layer                          │
-│  ┌────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
-│  │RunAnywhere │  │Configuration │  │  GenerationOptions     │ │
-│  │   SDK      │  │              │  │  GenerationResult      │ │
-│  └────────────┘  └──────────────┘  └────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────────┐
-│                      Core Engine Layer                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐   │
-│  │   Router    │  │  Executor   │  │  Cost Calculator     │   │
-│  │  Manager    │  │  Manager    │  │                      │   │
-│  └─────────────┘  └─────────────┘  └──────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────────┐
-│                    Model Management Layer                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐   │
-│  │   Model     │  │  Download   │  │   Model Registry     │   │
-│  │  Validator  │  │  Manager    │  │                      │   │
-│  └─────────────┘  └─────────────┘  └──────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────────┐
-│                    Runtime Providers Layer                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │   GGUF   │  │ Core ML  │  │   MLX    │  │ TensorFlow   │   │
-│  │ Provider │  │ Provider │  │ Provider │  │ Lite Provider│   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-┌─────────────────────────────────────────────────────────────────┐
-│                    Platform Services Layer                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────┐   │
-│  │  Hardware   │  │   Memory    │  │  Network Manager     │   │
-│  │  Detector   │  │  Manager    │  │                      │   │
-│  └─────────────┘  └─────────────┘  └──────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "Public API Layer"
+        SDK[RunAnywhereSDK.shared]
+        Config[Configuration]
+        GenOpt[GenerationOptions]
+        GenRes[GenerationResult]
+    end
+
+    subgraph "Core Engine Layer"
+        Router[RouterManager]
+        Executor[ExecutorManager]
+        CostCalc[CostCalculator]
+    end
+
+    subgraph "Model Management Layer"
+        Registry[DynamicModelRegistry]
+        Validator[ModelValidator]
+        Download[EnhancedDownloadManager]
+    end
+
+    subgraph "Runtime Providers Layer"
+        GGUF[GGUFProvider]
+        CoreML[CoreMLProvider]
+        MLX[MLXProvider]
+        TFLite[TensorFlowLiteProvider]
+    end
+
+    subgraph "Platform Services Layer"
+        Hardware[HardwareDetector]
+        Memory[UnifiedMemoryManager]
+        Network[NetworkManager]
+    end
+
+    SDK --> Router
+    SDK --> Registry
+    Router --> Executor
+    Router --> CostCalc
+    Executor --> GGUF
+    Executor --> CoreML
+    Executor --> MLX
+    Executor --> TFLite
+    Registry --> Validator
+    Registry --> Download
+    Executor --> Memory
+    Router --> Hardware
+    Download --> Network
 ```
 
 ## Component Overview
+
+### SDK Initialization Flow
+
+```mermaid
+flowchart LR
+    subgraph "App Code"
+        Import[import RunAnywhere]
+        GetSDK[RunAnywhereSDK.shared]
+        Init[sdk.initialize<br/>apiKey: 'key']
+        Config[sdk.configuration<br/>.privacyMode = .balanced]
+    end
+
+    subgraph "SDK Internal"
+        Validate[Validate API Key]
+        Hardware[Detect Hardware]
+        Registry[Load Model Registry]
+        Cache[Initialize Cache]
+        Memory[Setup Memory Manager]
+    end
+
+    Import --> GetSDK
+    GetSDK --> Init
+    Init --> Validate
+    Validate --> Hardware
+    Hardware --> Registry
+    Registry --> Cache
+    Cache --> Memory
+    Memory --> Config
+
+    style Import fill:#E1F5E1
+    style Config fill:#90EE90
+```
 
 ### Public API Layer
 The topmost layer that developers interact with directly. Provides a clean, Swift-idiomatic interface that hides internal complexity.
@@ -224,47 +263,126 @@ public class EnhancedDownloadManager {
 
 ### 1. Model Loading Flow
 
-```
-User Request → SDK.loadModel()
-    ↓
-Model Registry lookup
-    ↓
-Check local cache
-    ↓ (if not cached)
-Download Manager
-    ↓
-Model Validator
-    ↓
-Memory Manager allocation
-    ↓
-Runtime Provider initialization
-    ↓
-Return LoadedModel
+```mermaid
+sequenceDiagram
+    participant User
+    participant SDK as RunAnywhereSDK
+    participant Registry as DynamicModelRegistry
+    participant Cache as LocalCache
+    participant DM as DownloadManager
+    participant Validator as ModelValidator
+    participant Memory as MemoryManager
+    participant Provider as RuntimeProvider
+
+    User->>SDK: loadModel("model-id")
+    SDK->>Registry: find("model-id")
+    Registry-->>SDK: ModelInfo
+
+    SDK->>Cache: checkCache(modelInfo)
+    alt Model in cache
+        Cache-->>SDK: cachedModelPath
+    else Model not cached
+        SDK->>DM: download(modelInfo.url)
+        DM-->>SDK: downloadedPath
+        SDK->>Validator: validate(downloadedPath)
+        Validator-->>SDK: ValidationResult
+    end
+
+    SDK->>Memory: allocate(modelInfo.size)
+    Memory-->>SDK: MemoryAllocation
+
+    SDK->>Provider: loadModel(path, allocation)
+    Provider-->>SDK: LoadedModel
+
+    SDK-->>User: LoadedModel instance
 ```
 
 ### 2. Generation Flow
 
-```
-User Request → model.generate()
-    ↓
-Router Manager decision
-    ↓
-┌─────────────┬──────────────┐
-│  On-Device  │    Cloud     │
-└─────────────┴──────────────┘
-       ↓              ↓
-Local Provider   API Client
-       ↓              ↓
-    Execute       Execute
-       ↓              ↓
-└─────────────┬──────────────┘
-              ↓
-    Collect Metrics
-              ↓
-    Return Result
+```mermaid
+sequenceDiagram
+    participant User
+    participant Model as LoadedModel
+    participant Router as RouterManager
+    participant Hardware as HardwareDetector
+    participant Executor as ExecutorManager
+    participant Provider as RuntimeProvider
+    participant Cloud as CloudAPIClient
+    participant CostCalc as CostCalculator
+
+    User->>Model: generate(prompt, options)
+    Model->>Router: determineExecutionPath()
+    Router->>Hardware: detectCapabilities()
+    Hardware-->>Router: HardwareCapabilities
+
+    alt On-Device Execution
+        Router-->>Model: ExecutionPath.onDevice
+        Model->>Executor: execute(onDevice)
+        Executor->>Provider: runInference(input)
+        Provider-->>Executor: InferenceResult
+    else Cloud Execution
+        Router-->>Model: ExecutionPath.cloud
+        Model->>Executor: execute(cloud)
+        Executor->>Cloud: sendRequest(input)
+        Cloud-->>Executor: CloudResponse
+    end
+
+    Executor->>CostCalc: calculate(tokens, model)
+    CostCalc-->>Executor: CostMetrics
+
+    Executor-->>Model: GenerationResult
+    Model-->>User: GenerationResult with metrics
 ```
 
 ## Model Management
+
+### SDK Consumer Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Initialize: App Launch
+
+    Initialize --> Configure: SDK.initialize(apiKey)
+    Configure --> Ready: Configuration.set()
+
+    Ready --> LoadModel: loadModel(id)
+    LoadModel --> ModelReady: Success
+    LoadModel --> Error: Failed
+
+    ModelReady --> Generate: model.generate()
+    Generate --> Processing: In Progress
+    Processing --> Result: Success
+    Processing --> Fallback: On-Device Failed
+
+    Fallback --> CloudExec: Privacy Allows
+    Fallback --> Error: Privacy Strict
+    CloudExec --> Result
+
+    Result --> Ready: More Requests
+    Result --> Cleanup: App Background
+
+    Error --> Ready: Retry
+    Error --> Cleanup: Fatal
+
+    Cleanup --> [*]: Release Resources
+
+    note right of Initialize
+        1. Import RunAnywhere
+        2. Access SDK.shared
+    end note
+
+    note right of Configure
+        Set privacy mode,
+        cost thresholds,
+        custom endpoints
+    end note
+
+    note right of Generate
+        Automatic routing,
+        cost tracking,
+        performance metrics
+    end note
+```
 
 ### Model Lifecycle
 
@@ -322,14 +440,32 @@ The router considers multiple factors when choosing execution path:
 
 ### Fallback Strategy
 
-```
-Primary: On-device execution
-    ↓ (if fails)
-Fallback 1: Alternative on-device model
-    ↓ (if fails)
-Fallback 2: Cloud execution (if allowed)
-    ↓ (if fails)
-Error with recovery suggestions
+```mermaid
+flowchart TD
+    Start([User Request]) --> Router{RouterManager}
+
+    Router --> OnDevice[Try On-Device Execution]
+    OnDevice --> CheckOnDevice{Success?}
+
+    CheckOnDevice -->|Yes| Success[Return Result]
+    CheckOnDevice -->|No| AltModel[Try Alternative Model]
+
+    AltModel --> CheckAlt{Success?}
+    CheckAlt -->|Yes| Success
+    CheckAlt -->|No| Privacy{Privacy Mode?}
+
+    Privacy -->|Allows Cloud| Cloud[Try Cloud Execution]
+    Privacy -->|Strict| Error[Return Error]
+
+    Cloud --> CheckCloud{Success?}
+    CheckCloud -->|Yes| Success
+    CheckCloud -->|No| Error
+
+    Error --> Suggestions[Include Recovery Suggestions]
+
+    style Success fill:#90EE90
+    style Error fill:#FFB6C1
+    style Router fill:#87CEEB
 ```
 
 ## Memory Management
