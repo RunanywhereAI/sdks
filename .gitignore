@@ -141,3 +141,47 @@ hs_err_pid*
 EXTERNAL/
 thoughts/
 local/
+
+# Security and credentials
+.env
+.env.*
+*.pem
+*.p12
+*.pfx
+*.cert
+*.crt
+*.key
+secrets/
+credentials/
+config/secrets.*
+config/credentials.*
+
+# API keys and tokens
+*_api_key*
+*_token*
+*.secret
+secrets.json
+secrets.yaml
+secrets.yml
+credentials.json
+credentials.yaml
+credentials.yml
+
+# Cloud provider credentials
+.aws/
+.gcp/
+.azure/
+service-account*.json
+firebase-adminsdk*.json
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+database.yml
+
+# RunAnywhere specific
+runanywhere-config.json
+runanywhere-credentials.json
+model-tokens.json
+*.rakey

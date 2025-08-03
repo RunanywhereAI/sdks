@@ -11,6 +11,7 @@ RunAnywhere is a powerful Swift SDK that enables intelligent AI model execution 
 - 📱 **Cross-Platform**: Supports iOS 13.0+, macOS 10.15+, tvOS 13.0+, and watchOS 6.0+
 - 🔄 **Automatic Model Management**: Handles model downloading, caching, and memory management
 - 📊 **Performance Monitoring**: Built-in metrics for latency, token throughput, and resource usage
+- 🛡️ **Security Built-in**: Secure API key storage, credential scanning, and runtime security checks
 
 ## Requirements
 
@@ -25,14 +26,20 @@ RunAnywhere is a powerful Swift SDK that enables intelligent AI model execution 
 Add RunAnywhere to your project using Swift Package Manager:
 
 1. In Xcode, select **File > Add Package Dependencies**
-2. Enter the repository URL: `https://github.com/yourusername/runanywhere-swift`
+2. Enter the repository URL: `https://github.com/RunanywhereAI/runanywhere-swift`
 3. Select the version you want to use
 
 Or add it to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourusername/runanywhere-swift", from: "1.0.0")
+    .package(url: "https://github.com/RunanywhereAI/runanywhere-swift", from: "1.0.0")
+],
+targets: [
+    .target(
+        name: "YourTarget",
+        dependencies: ["RunAnywhere"]
+    )
 ]
 ```
 
@@ -44,14 +51,16 @@ dependencies: [
 import RunAnywhere
 
 // Initialize with your API key
-try await RunAnywhereSDK.shared.initialize(
+let configuration = Configuration(
     apiKey: "your-api-key",
-    configuration: Configuration(
-        allowCloudFallback: true,
-        privacyMode: .balanced,
-        debugMode: true
-    )
+    enableRealTimeDashboard: true,
+    telemetryConsent: .granted
 )
+
+// Configure security settings
+configuration.securityConfiguration = .default
+
+try await RunAnywhereSDK.shared.initialize(configuration: configuration)
 ```
 
 ### 2. Load a Model
@@ -60,21 +69,16 @@ try await RunAnywhereSDK.shared.initialize(
 // Load a model by name (automatic format detection)
 let model = try await RunAnywhereSDK.shared.loadModel("llama-3.2-1b")
 
-// Or load with specific options
-let model = try await RunAnywhereSDK.shared.loadModel(
-    "llama-3.2-1b",
-    options: ModelLoadOptions(
-        preferredExecution: .onDevice,
-        maxMemoryUsage: 2_000_000_000 // 2GB
-    )
-)
+// Or check available models first
+let availableModels = try await RunAnywhereSDK.shared.listAvailableModels()
+print("Available models: \(availableModels.map { $0.name })")
 ```
 
 ### 3. Generate Text
 
 ```swift
 // Simple generation
-let result = try await model.generate(
+let result = try await RunAnywhereSDK.shared.generate(
     prompt: "Explain quantum computing in simple terms",
     options: GenerationOptions(
         maxTokens: 100,
@@ -83,26 +87,71 @@ let result = try await model.generate(
 )
 
 print(result.text)
-print("Cost: $\(result.estimatedCost)")
-print("Tokens/sec: \(result.tokensPerSecond)")
+print("Cost: $\(result.costBreakdown.totalCost)")
+print("Saved: $\(result.savedAmount)")
+print("Execution: \(result.executionTarget)")
 ```
 
 ### 4. Chat Conversations
 
 ```swift
 // Create a conversation context
-let context = RunAnywhereSDK.shared.createContext()
-
-// Add messages
+let context = Context()
 context.addMessage(Message(role: .user, content: "What is Swift?"))
 context.addMessage(Message(role: .assistant, content: "Swift is a modern programming language..."))
 context.addMessage(Message(role: .user, content: "What are its main features?"))
 
 // Generate with context
-let result = try await model.generate(
+let result = try await RunAnywhereSDK.shared.generate(
+    prompt: "Please answer based on our conversation",
     context: context,
     options: GenerationOptions(maxTokens: 200)
 )
+```
+
+## Security Features
+
+### Secure API Key Storage
+
+```swift
+// API keys are automatically stored in the iOS Keychain
+let secureStorage = SecureStorage(serviceName: "com.yourapp.runanywhere")
+
+// Store API key securely
+try secureStorage.storeAPIKey("your-api-key")
+
+// Retrieve API key
+let apiKey = try secureStorage.retrieveAPIKey()
+```
+
+### Security Configuration
+
+```swift
+// Use strict security for production
+let config = Configuration(apiKey: apiKey)
+config.securityConfiguration = .strict
+
+// Or customize security settings
+config.securityConfiguration = SecurityConfiguration(
+    validateAPIKey: true,
+    minimumAPIKeyLength: 64,
+    scanLogsForCredentials: true,
+    useSecureStorage: true,
+    enableCertificatePinning: true,
+    pinnedCertificates: ["your-cert-fingerprint"],
+    enableRuntimeSecurityChecks: true,
+    redactSensitiveErrors: true
+)
+```
+
+### Credential Scanning
+
+The SDK automatically scans and redacts sensitive information from logs:
+
+```swift
+// Logs are automatically redacted
+// Original: "API Key: sk-1234567890abcdef"
+// Logged as: "API Key: sk-12...[API Key REDACTED]"
 ```
 
 ## Basic Usage Examples
@@ -111,41 +160,51 @@ let result = try await model.generate(
 
 ```swift
 // Configure for maximum privacy
-let configuration = Configuration(
-    allowCloudFallback: false,  // Never use cloud
-    privacyMode: .strict,        // Strictest privacy settings
-    localModelPath: "/path/to/models"
-)
+var configuration = Configuration(apiKey: apiKey)
+configuration.privacyMode = .strict
+configuration.routingPolicy = .onDeviceOnly
 
-try await RunAnywhereSDK.shared.initialize(apiKey: apiKey, configuration: configuration)
+try await RunAnywhereSDK.shared.initialize(configuration: configuration)
+
+// All generation will happen on-device
+let result = try await RunAnywhereSDK.shared.generate(
+    prompt: "Process this sensitive data...",
+    options: GenerationOptions(maxTokens: 100)
+)
 ```
 
 ### Cost-Optimized Generation
 
 ```swift
-// Set cost thresholds
+// Configure for cost optimization
 let options = GenerationOptions(
     maxTokens: 100,
-    costThreshold: 0.001,  // Switch to cheaper option if cost exceeds $0.001
-    preferredExecution: .auto
+    temperature: 0.7,
+    routingPolicy: .costOptimized,
+    maxCostPerGeneration: 0.001  // $0.001 limit
 )
 
-let result = try await model.generate(prompt: prompt, options: options)
-print("Actual cost: $\(result.estimatedCost)")
-print("Savings: $\(result.estimatedSavings)")
+let result = try await RunAnywhereSDK.shared.generate(
+    prompt: prompt,
+    options: options
+)
+
+print("Actual cost: $\(result.costBreakdown.totalCost)")
+print("Saved: $\(result.savedAmount)")
+print("Execution target: \(result.executionTarget)")
 ```
 
 ### Streaming Responses
 
 ```swift
 // Stream tokens as they're generated
-let stream = try await model.generateStream(
+let stream = RunAnywhereSDK.shared.generateStream(
     prompt: "Write a story about a robot",
     options: GenerationOptions(maxTokens: 500)
 )
 
-for try await token in stream {
-    print(token, terminator: "")
+for try await chunk in stream {
+    print(chunk, terminator: "")
 }
 ```
 
@@ -153,55 +212,71 @@ for try await token in stream {
 
 RunAnywhere supports various model formats out of the box:
 
-- **GGUF**: Llama, Mistral, and other popular models
-- **Core ML**: Apple's optimized format for iOS/macOS
-- **MLX**: Apple's new ML framework models
-- **ONNX**: Cross-platform neural network models
-- **TensorFlow Lite**: Lightweight TensorFlow models
+| Format | Description | Supported Devices |
+|--------|-------------|-------------------|
+| **GGUF** | Llama, Mistral, and other popular models | All devices |
+| **Core ML** | Apple's optimized format | iOS, macOS |
+| **MLX** | Apple's new ML framework | Apple Silicon Macs |
+| **ONNX** | Cross-platform neural network models | All devices |
+| **TensorFlow Lite** | Lightweight TensorFlow models | All devices |
+
+### Registering Custom Framework Adapters
+
+```swift
+// Register a custom framework adapter
+let customAdapter = MyCustomFrameworkAdapter()
+RunAnywhereSDK.shared.registerFrameworkAdapter(customAdapter)
+
+// Check available frameworks
+let frameworks = RunAnywhereSDK.shared.getAvailableFrameworks()
+print("Available frameworks: \(frameworks)")
+```
 
 ## Error Handling
 
 ```swift
 do {
-    let result = try await model.generate(prompt: "Hello")
-} catch RunAnywhereError.modelNotFound {
-    print("Model not available")
-} catch RunAnywhereError.insufficientMemory {
-    print("Not enough memory for on-device execution")
-} catch RunAnywhereError.networkError(let error) {
-    print("Network error: \(error)")
+    let result = try await RunAnywhereSDK.shared.generate(
+        prompt: "Hello",
+        options: GenerationOptions()
+    )
+    print(result.text)
+} catch let error as RunAnywhereError {
+    switch error {
+    case .modelNotFound(let message):
+        print("Model not found: \(message)")
+    case .insufficientMemory(let required, let available):
+        print("Need \(required) bytes, have \(available)")
+    case .networkError(let underlying):
+        print("Network error: \(underlying)")
+    case .unauthorized:
+        print("Invalid API key")
+    default:
+        print("Error: \(error)")
+    }
 } catch {
     print("Unexpected error: \(error)")
 }
 ```
 
-## Advanced Configuration
-
-### Custom Hardware Detection
+## Performance Monitoring
 
 ```swift
-// Implement custom hardware capability detection
-class MyHardwareDetector: HardwareDetector {
-    func detectCapabilities() -> HardwareCapabilities {
-        // Custom detection logic
-    }
-}
+// Enable performance monitoring
+let monitor = RunAnywhereSDK.shared.performanceMonitor
+monitor.startMonitoring()
 
-RunAnywhereSDK.shared.setHardwareDetector(MyHardwareDetector())
-```
+// Generate with monitoring
+let result = try await RunAnywhereSDK.shared.generate(
+    prompt: prompt,
+    options: options
+)
 
-### Authentication Provider
-
-```swift
-// Implement custom authentication
-class MyAuthProvider: AuthProvider {
-    func getAuthToken() async throws -> String {
-        // Custom auth logic
-        return "bearer-token"
-    }
-}
-
-RunAnywhereSDK.shared.setAuthProvider(MyAuthProvider())
+// Access performance metrics
+print("Inference time: \(result.performanceMetrics.inferenceTime)ms")
+print("Tokens/second: \(result.performanceMetrics.tokensPerSecond)")
+print("Memory peak: \(result.performanceMetrics.memoryPeak) bytes")
+print("CPU usage: \(result.performanceMetrics.cpuUsage)%")
 ```
 
 ## Development
@@ -210,7 +285,7 @@ RunAnywhereSDK.shared.setAuthProvider(MyAuthProvider())
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/runanywhere-swift
+git clone https://github.com/RunanywhereAI/runanywhere-swift
 cd runanywhere-swift
 
 # Build the SDK
@@ -234,35 +309,53 @@ swift test --enable-code-coverage
 
 # Run specific test
 swift test --filter RunAnywhereTests.GenerationTests
+
+# Generate coverage report
+swift test --enable-code-coverage
+xcrun llvm-cov export \
+  .build/debug/RunAnywherePackageTests.xctest/Contents/MacOS/RunAnywherePackageTests \
+  -instr-profile .build/debug/codecov/default.profdata \
+  -format=lcov > coverage.lcov
+```
+
+### Linting
+
+```bash
+# Run SwiftLint
+swiftlint
+
+# Auto-fix issues
+swiftlint --fix
 ```
 
 ## Documentation
 
-- [Architecture Overview](docs/ARCHITECTURE.md) - Detailed SDK architecture and design
-- [API Reference](docs/API_REFERENCE.md) - Complete API documentation
-- [Migration Guide](docs/MIGRATION.md) - Upgrading from previous versions
-- [Examples](examples/) - Sample applications and code snippets
+- [Architecture Overview](../../docs/ARCHITECTURE.md) - Detailed SDK architecture and design
+- [API Reference](../../docs/API_REFERENCE.md) - Complete API documentation
+- [Security Guidelines](../../SECURITY.md) - Security best practices
+- [Examples](../../examples/ios/) - Sample applications and code snippets
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guidelines](../../CONTRIBUTING.md) for details.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Run tests and ensure they pass
+4. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](../../LICENSE) file for details.
 
 ## Support
 
-- 📧 Email: support@runanywhere.ai
+- 📧 Email: [support@runanywhere.ai](mailto:support@runanywhere.ai)
 - 💬 Discord: [Join our community](https://discord.gg/runanywhere)
 - 📚 Documentation: [docs.runanywhere.ai](https://docs.runanywhere.ai)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/runanywhere-swift/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/RunanywhereAI/runanywhere-swift/issues)
 
 ## Acknowledgments
 

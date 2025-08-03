@@ -38,6 +38,9 @@ public struct Configuration {
     /// Download configuration
     public var downloadConfiguration: DownloadConfig
 
+    /// Security configuration
+    public var securityConfiguration: SecurityConfiguration
+
     /// Initialize configuration with API key
     /// - Parameters:
     ///   - apiKey: Your RunAnywhere API key
@@ -60,5 +63,6 @@ public struct Configuration {
         self.modelProviders = []
         self.memoryThreshold = 500_000_000 // 500MB default
         self.downloadConfiguration = DownloadConfig()
+        self.securityConfiguration = .default
     }
 }
