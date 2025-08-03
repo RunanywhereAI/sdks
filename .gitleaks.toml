@@ -1,0 +1,53 @@
+# Gitleaks configuration for RunAnywhere SDK
+# This configuration extends the default rules with project-specific patterns
+
+[extend]
+# Extend default gitleaks config
+useDefault = true
+
+# Additional custom rules for RunAnywhere SDK
+[[rules]]
+id = "runanywhere-api-key"
+description = "RunAnywhere API Key"
+regex = '''(?i)(runanywhere[_\-\s]?api[_\-\s]?key|RA_API_KEY|RUNANYWHERE_KEY)[\s]*[=:]\s*["']?[a-zA-Z0-9\-_]{20,}["']?'''
+tags = ["key", "RunAnywhere"]
+
+[[rules]]
+id = "model-download-token"
+description = "Model Download Token"
+regex = '''(?i)(download[_\-\s]?token|model[_\-\s]?token)[\s]*[=:]\s*["']?[a-zA-Z0-9\-_]{20,}["']?'''
+tags = ["token", "RunAnywhere"]
+
+[[rules]]
+id = "cloud-provider-key"
+description = "Cloud Provider API Key"
+regex = '''(?i)(anthropic|openai|claude|gpt)[_\-\s]?(api[_\-\s]?)?key[\s]*[=:]\s*["']?[a-zA-Z0-9\-_]{20,}["']?'''
+tags = ["key", "cloud"]
+
+# Allowlist patterns that are safe
+[allowlist]
+description = "Allowlist for RunAnywhere SDK"
+paths = [
+    # Documentation and examples
+    '''^.*\.(md|MD|markdown|rst|txt)$''',
+    # Test files with mock data
+    '''test/.*mock.*''',
+    '''.*test.*\.swift$''',
+    '''.*test.*\.kt$''',
+]
+
+# Allow truncated API keys (first 5 chars only)
+regexTarget = "line"
+regexes = [
+    # Allow API key truncation pattern used in SDK
+    '''apiKey\.take\(5\)''',
+    # Allow example/placeholder API keys
+    '''YOUR_API_KEY_HERE''',
+    '''<your-api-key>''',
+    '''placeholder_api_key''',
+    '''YOUR_TOKEN''',
+    '''1234567890abcdef1234567890abcdef''',
+    # Allow environment variable references without values
+    '''process\.env\.[A-Z_]+''',
+    '''ENV\[['"'][A-Z_]+['"']\]''',
+]

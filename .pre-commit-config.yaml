@@ -2,6 +2,12 @@
 # See https://pre-commit.com for more information
 
 repos:
+  # Security - Gitleaks for credential detection
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+
   # General hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
@@ -12,6 +18,16 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=1000']
       - id: check-merge-conflict
+
+  # Security checks
+  - repo: local
+    hooks:
+      - id: security-check
+        name: Security checks for credentials and sensitive data
+        entry: scripts/security-check.sh
+        language: script
+        pass_filenames: false
+        always_run: true
 
   # TODO Comments Check
   - repo: local

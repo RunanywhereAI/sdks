@@ -1,256 +1,251 @@
 # Contributing to RunAnywhere SDKs
 
-Thank you for your interest in contributing to RunAnywhere SDKs! We welcome contributions from the community and are grateful for your help in making our SDKs better.
+First off, thank you for considering contributing to RunAnywhere SDKs! It's people like you that make RunAnywhere such a great tool for developers building on-device AI applications.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
+- [How Can I Contribute?](#how-can-i-contribute)
 - [Development Setup](#development-setup)
-- [Making Changes](#making-changes)
-- [Submitting Changes](#submitting-changes)
-- [Code Style](#code-style)
-- [Testing](#testing)
-- [Reporting Issues](#reporting-issues)
+- [Style Guidelines](#style-guidelines)
+- [Commit Messages](#commit-messages)
+- [Pull Request Process](#pull-request-process)
+- [Security](#security)
 
-## 🤝 Code of Conduct
+## Code of Conduct
 
-By participating in this project, you are expected to uphold our code of conduct. Please be respectful and constructive in all interactions.
+This project and everyone participating in it is governed by the [RunAnywhere Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to [conduct@runanywhere.ai](mailto:conduct@runanywhere.ai).
 
-## 🚀 Getting Started
+## Getting Started
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/your-username/runanywhere-sdks.git
-   cd runanywhere-sdks
-   ```
-3. **Set up the development environment** (see [Development Setup](#development-setup))
-4. **Create a new branch** for your feature or bug fix:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+1. Fork the repository on GitHub
+2. Clone your fork locally
+3. Set up the development environment (see [Development Setup](#development-setup))
+4. Create a branch for your changes
+5. Make your changes
+6. Run tests and ensure they pass
+7. Submit a pull request
 
-## 🛠️ Development Setup
+## How Can I Contribute?
+
+### Reporting Bugs
+
+Before creating bug reports, please check existing issues as you might find out that you don't need to create one. When you are creating a bug report, please include as many details as possible:
+
+**Bug Report Template:**
+- **Description**: A clear and concise description of what the bug is
+- **To Reproduce**: Steps to reproduce the behavior
+- **Expected behavior**: What you expected to happen
+- **Screenshots**: If applicable
+- **Environment**:
+  - SDK Version:
+  - OS: [e.g. iOS 17.0, Android 14]
+  - Device: [e.g. iPhone 15, Pixel 8]
+  - Xcode/Android Studio version:
+
+### Suggesting Enhancements
+
+Enhancement suggestions are tracked as GitHub issues. When creating an enhancement suggestion, please include:
+
+- **Use case**: Explain why this enhancement would be useful
+- **Proposed solution**: Describe the solution you'd like
+- **Alternatives**: Describe alternatives you've considered
+
+### Your First Code Contribution
+
+Unsure where to begin? You can start by looking through these issues:
+
+- Issues labeled `good first issue` - should only require a few lines of code
+- Issues labeled `help wanted` - more involved but still accessible
+
+## Development Setup
 
 ### Prerequisites
 
-**For Android Development:**
-- Android Studio Arctic Fox or later
-- JDK 11 or later
-- Android SDK with API level 24+
-
-**For iOS Development:**
-- Xcode 15.0+
-- Swift 5.9+
-- macOS 10.15+
-
-### Environment Setup
-
-1. **Install pre-commit hooks** (recommended):
+1. **For all platforms**:
    ```bash
-   pip install pre-commit
+   brew install pre-commit gitleaks
    pre-commit install
    ```
 
-2. **Android SDK Setup:**
-   ```bash
-   cd sdk/runanywhere-android/
-   ./gradlew build
-   ```
+2. **For Android development**:
+   - Android Studio Arctic Fox or later
+   - JDK 11 or later
+   - Android SDK with API level 24+
 
-3. **iOS SDK Setup:**
-   ```bash
-   cd sdk/runanywhere-swift/
-   swift build
-   ```
+3. **For iOS development**:
+   - Xcode 15.0 or later
+   - Swift 5.9+
+   - SwiftLint: `brew install swiftlint`
 
-## 🔧 Making Changes
+### Building the SDKs
 
-### Branch Naming Convention
-
-- `feature/description` - for new features
-- `bugfix/description` - for bug fixes
-- `docs/description` - for documentation updates
-- `refactor/description` - for code refactoring
-
-### Commit Message Format
-
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
-
-```
-<type>[optional scope]: <description>
-
-[optional body]
-
-[optional footer(s)]
+#### Android SDK
+```bash
+cd sdk/runanywhere-android/
+./gradlew build
+./gradlew test
+./gradlew lint
 ```
 
-**Types:**
-- `feat`: A new feature
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `style`: Changes that do not affect the meaning of the code
-- `refactor`: A code change that neither fixes a bug nor adds a feature
-- `test`: Adding missing tests or correcting existing tests
-- `chore`: Changes to the build process or auxiliary tools
-
-**Examples:**
+#### iOS SDK
+```bash
+cd sdk/runanywhere-swift/
+swift build
+swift test
+swiftlint
 ```
-feat(android): add cost tracking to generation results
-fix(ios): resolve memory leak in model loading
-docs: update README with new API examples
-```
-
-## 📤 Submitting Changes
-
-1. **Ensure your code follows our style guidelines** (see [Code Style](#code-style))
-2. **Add or update tests** for your changes
-3. **Run the test suite** to ensure nothing is broken:
-   ```bash
-   # Android
-   cd sdk/runanywhere-android/
-   ./gradlew test lint
-
-   # iOS
-   cd sdk/runanywhere-swift/
-   swift test
-   swiftlint
-   ```
-4. **Commit your changes** with a clear commit message
-5. **Push to your fork**:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-6. **Create a Pull Request** on GitHub with:
-   - Clear title and description
-   - Reference to any related issues
-   - Screenshots or examples if applicable
-
-### Pull Request Guidelines
-
-- **Keep PRs focused** - one feature or bug fix per PR
-- **Write clear descriptions** - explain what and why, not just how
-- **Update documentation** if your changes affect the public API
-- **Add tests** for new functionality
-- **Ensure CI passes** - all checks must be green
-
-## 🎨 Code Style
-
-### Android (Kotlin)
-
-- Follow [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
-- Use 4 spaces for indentation
-- Maximum line length: 120 characters
-- Run `./gradlew ktlintFormat` to auto-format code
-
-### iOS (Swift)
-
-- Follow [Swift API Design Guidelines](https://swift.org/documentation/api-design-guidelines/)
-- Use 4 spaces for indentation
-- Maximum line length: 120 characters
-- Run `swiftlint` to check style compliance
-
-### General Guidelines
-
-- **Use meaningful names** for variables, functions, and classes
-- **Write self-documenting code** with clear intent
-- **Add comments** for complex logic or business rules
-- **Avoid deep nesting** - prefer early returns and guard clauses
-- **Keep functions small** and focused on a single responsibility
-
-## 🧪 Testing
-
-### Writing Tests
-
-- **Unit tests** for business logic and utilities
-- **Integration tests** for API interactions
-- **UI tests** for critical user flows (example apps)
 
 ### Running Tests
 
+Always ensure tests pass before submitting a PR:
+
 ```bash
-# Android SDK tests
-cd sdk/runanywhere-android/
+# Android
 ./gradlew test
 
-# iOS SDK tests
-cd sdk/runanywhere-swift/
-swift test
-
-# Android example app tests
-cd examples/android/RunAnywhereAI/
-./gradlew test
-
-# iOS example app tests
-cd examples/ios/RunAnywhereAI/
-xcodebuild test -scheme RunAnywhereAI -destination 'platform=iOS Simulator,name=iPhone 15'
+# iOS
+swift test --enable-code-coverage
 ```
 
-### Test Coverage
+## Style Guidelines
 
-We aim for high test coverage, especially for:
-- Core SDK functionality
-- API interfaces
-- Error handling
-- Edge cases
+### Kotlin Style Guide (Android)
 
-## 🐛 Reporting Issues
+We follow the [official Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html) with these additions:
 
-### Before Reporting
+- Use 4 spaces for indentation
+- Maximum line length: 120 characters
+- Always use explicit types for public APIs
+- Document all public APIs with KDoc
 
-1. **Search existing issues** to avoid duplicates
-2. **Try the latest version** to see if the issue is already fixed
-3. **Check the documentation** for known limitations
+Example:
+```kotlin
+/**
+ * Generates text using the loaded model
+ * @param prompt The input prompt
+ * @param options Generation options
+ * @return Generated text result with metrics
+ */
+suspend fun generate(
+    prompt: String,
+    options: GenerationOptions = GenerationOptions()
+): GenerationResult {
+    // Implementation
+}
+```
 
-### Creating an Issue
+### Swift Style Guide (iOS)
 
-Use our issue templates and provide:
+We follow the [Swift API Design Guidelines](https://swift.org/documentation/api-design-guidelines/) with SwiftLint enforcement:
 
-**For Bug Reports:**
-- Clear description of the problem
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment details (OS, SDK version, etc.)
-- Code samples or logs if applicable
+- Use 4 spaces for indentation
+- Maximum line length: 120 characters
+- Use `// MARK: -` comments to organize code
+- Document all public APIs with documentation comments
 
-**For Feature Requests:**
-- Clear description of the desired functionality
-- Use cases and examples
-- Potential implementation approach (if you have ideas)
+Example:
+```swift
+/// Generates text using the loaded model
+/// - Parameters:
+///   - prompt: The input prompt
+///   - options: Generation options
+/// - Returns: Generated text result with metrics
+/// - Throws: `SDKError` if generation fails
+public func generate(
+    prompt: String,
+    options: GenerationOptions = GenerationOptions()
+) async throws -> GenerationResult {
+    // Implementation
+}
+```
 
-## 📚 Documentation
+### TODO Comments
 
-When contributing:
+All TODO comments MUST reference a GitHub issue:
 
-- **Update relevant README files** for API changes
-- **Add inline documentation** for public methods
-- **Include code examples** for new features
-- **Update CHANGELOG.md** for significant changes
+```swift
+// TODO: #123 - Implement retry logic for failed requests
+```
 
-## 🎯 Areas for Contribution
+## Commit Messages
 
-We especially welcome contributions in these areas:
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
 
-- **Performance optimizations**
-- **Additional model format support**
-- **Improved error handling**
-- **Documentation and examples**
-- **Test coverage improvements**
-- **CI/CD enhancements**
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation only changes
+- `style:` Code style changes (formatting, missing semicolons, etc)
+- `refactor:` Code change that neither fixes a bug nor adds a feature
+- `perf:` Performance improvement
+- `test:` Adding missing tests
+- `chore:` Changes to build process or auxiliary tools
 
-## ❓ Questions?
+Examples:
+```
+feat: add streaming support for text generation
+fix: resolve memory leak in model loading
+docs: update installation instructions for SPM
+```
 
-- **General questions**: Open a GitHub Discussion
-- **Bug reports**: Create an issue using the bug report template
-- **Feature requests**: Create an issue using the feature request template
-- **Security issues**: Email security@runanywhere.ai (do not create public issues)
+## Pull Request Process
 
-## 🙏 Recognition
+1. **Before submitting**:
+   - Update the README.md with details of changes if needed
+   - Run all tests and ensure they pass
+   - Run lint checks: `pre-commit run --all-files`
+   - Update documentation for any API changes
 
-Contributors will be recognized in our:
-- CONTRIBUTORS.md file
-- Release notes for significant contributions
-- Community spotlights
+2. **PR Title**: Follow the commit message format (e.g., `feat: add streaming support`)
 
-Thank you for contributing to RunAnywhere SDKs! 🚀
+3. **PR Description**: Use the PR template and include:
+   - What changes were made and why
+   - Link to any relevant issues
+   - Screenshots/recordings for UI changes
+   - Test results
+
+4. **Review Process**:
+   - At least one maintainer approval required
+   - All CI checks must pass
+   - No merge conflicts
+   - Conversations resolved
+
+5. **After merge**:
+   - Delete your branch
+   - Close related issues
+
+## Security
+
+### Security Checks
+
+Before submitting code:
+
+1. **Run security scan**:
+   ```bash
+   gitleaks detect --config .gitleaks.toml
+   ./scripts/security-check.sh
+   ```
+
+2. **Never commit**:
+   - API keys or tokens
+   - Passwords or secrets
+   - Private keys or certificates
+   - Personal information
+
+3. **Use secure storage**:
+   - iOS: Use the provided `SecureStorage` class
+   - Android: Use encrypted SharedPreferences
+
+### Reporting Security Vulnerabilities
+
+Please DO NOT report security vulnerabilities through public GitHub issues. Instead, please report them to [security@runanywhere.ai](mailto:security@runanywhere.ai). See our [Security Policy](SECURITY.md) for more details.
+
+## Questions?
+
+Feel free to:
+- Open a [GitHub Discussion](https://github.com/RunanywhereAI/runanywhere-sdks/discussions)
+- Join our [Discord Community](https://discord.gg/runanywhere)
+- Contact the team at [support@runanywhere.ai](mailto:support@runanywhere.ai)
+
+Thank you for contributing! 🎉
