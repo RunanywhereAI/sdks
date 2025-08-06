@@ -6,6 +6,7 @@ This plan outlines the integration of DeviceKit into the RunAnywhere Swift SDK t
 
 ### Current Problems
 - Hardcoded processor detection that fails for new devices (M3, M4, A18)
+
 - Generic device names ("iPhone", "iPad") instead of specific models
 - Simplified Neural Engine detection missing nuanced capabilities
 - No thermal state monitoring or battery optimization

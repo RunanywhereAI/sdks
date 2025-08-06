@@ -1,165 +1,218 @@
 import Foundation
+import Swinject
 
-/// Service container for dependency injection
+/// Service container for dependency injection - migrated to use Swinject
+/// This class now acts as a facade over the Swinject-based SDKAssembler
 public class ServiceContainer {
     /// Shared instance
     public static let shared: ServiceContainer = ServiceContainer()
+
+    /// The SDK assembler that manages all dependencies
+    private var assembler: SDKAssembler?
+
+    /// The Swinject resolver for accessing services
+    private var resolver: Resolver? {
+        return assembler?.synchronizedResolver
+    }
     // MARK: - Core Services
 
     /// Configuration validator
-    private(set) lazy var configurationValidator: ConfigurationValidator = {
-        ConfigurationValidator()
-    }()
+    public var configurationValidator: ConfigurationValidator {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(ConfigurationValidator.self)
+    }
 
     /// Model registry
-    private(set) lazy var modelRegistry: ModelRegistry = {
-        RegistryService()
-    }()
+    public var modelRegistry: ModelRegistry {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(RegistryService.self)
+    }
 
     /// Framework adapter registry
-    internal lazy var adapterRegistry: FrameworkAdapterRegistry = {
-        FrameworkAdapterRegistryImpl()
-    }()
+    internal var adapterRegistry: FrameworkAdapterRegistry {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(FrameworkAdapterRegistry.self)
+    }
 
 
     // MARK: - Capability Services
 
     /// Model loading service
-    private(set) lazy var modelLoadingService: ModelLoadingService = {
-        ModelLoadingService(
-            registry: modelRegistry,
-            adapterRegistry: adapterRegistry,
-            validationService: validationService,
-            memoryService: memoryService
-        )
-    }()
+    public var modelLoadingService: ModelLoadingService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(ModelLoadingService.self)
+    }
 
     /// Generation service
-    private(set) lazy var generationService: GenerationService = {
-        GenerationService(
-            routingService: routingService,
-            contextManager: contextManager,
-            performanceMonitor: performanceMonitor,
-            modelLoadingService: modelLoadingService
-        )
-    }()
+    public var generationService: GenerationService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(GenerationService.self)
+    }
 
     /// Streaming service
-    private(set) lazy var streamingService: StreamingService = {
-        StreamingService(generationService: generationService, modelLoadingService: modelLoadingService)
-    }()
+    public var streamingService: StreamingService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(StreamingService.self)
+    }
 
     /// Context manager
-    private(set) lazy var contextManager: ContextManager = {
-        ContextManager()
-    }()
+    public var contextManager: ContextManager {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(ContextManager.self)
+    }
 
     /// Validation service
-    private(set) lazy var validationService: ValidationService = {
-        ValidationService()
-    }()
+    public var validationService: ValidationService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(ValidationService.self)
+    }
 
     /// Download service
-    private(set) lazy var downloadService: AlamofireDownloadService = {
-        AlamofireDownloadService()
-    }()
+    public var downloadService: AlamofireDownloadService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(AlamofireDownloadService.self)
+    }
 
     // Download queue removed - handled by AlamofireDownloadService
 
     /// Progress service (implements ProgressTracker protocol)
-    private(set) lazy var progressService: ProgressTracker = {
-        ProgressService(
-            stageManager: StageManager(),
-            progressAggregator: ProgressAggregator()
-        )
-    }()
+    public var progressService: ProgressTracker {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(ProgressService.self)
+    }
 
     // Storage service removed - replaced by SimplifiedFileManager
     // Model storage manager removed - replaced by SimplifiedFileManager
 
     /// Simplified file manager
-    private(set) lazy var fileManager: SimplifiedFileManager = {
-        do {
-            return try SimplifiedFileManager()
-        } catch {
-            fatalError("Failed to initialize file manager: \(error)")
+    public var fileManager: SimplifiedFileManager {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
         }
-    }()
+        return resolver.resolveRequired(SimplifiedFileManager.self)
+    }
 
     /// Routing service
-    private(set) lazy var routingService: RoutingService = {
-        RoutingService(
-            costCalculator: CostCalculator(),
-            resourceChecker: ResourceChecker(hardwareManager: hardwareManager)
-        )
-    }()
+    public var routingService: RoutingService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(RoutingService.self)
+    }
 
     // Memory service and monitor placeholders removed - using unifiedMemoryManager instead
 
     // MARK: - Monitoring Services
 
     /// Performance monitor
-    private(set) lazy var performanceMonitor: PerformanceMonitor = {
-        MonitoringService()
-    }()
+    public var performanceMonitor: PerformanceMonitor {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(MonitoringService.self)
+    }
 
     // Storage monitor removed - storage monitoring handled by SimplifiedFileManager
 
     /// Benchmark runner
-    private(set) lazy var benchmarkRunner: BenchmarkRunner = {
-        BenchmarkService()
-    }()
+    public var benchmarkRunner: BenchmarkRunner {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(BenchmarkService.self)
+    }
 
     /// A/B test runner
-    private(set) lazy var abTestRunner: ABTestRunner = {
-        ABTestService()
-    }()
+    public var abTestRunner: ABTestRunner {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(ABTestService.self)
+    }
 
     // MARK: - Infrastructure
 
     /// Hardware manager
-    private(set) lazy var hardwareManager: HardwareCapabilityManager = {
-        HardwareCapabilityManager.shared
-    }()
+    public var hardwareManager: HardwareCapabilityManager {
+        return HardwareCapabilityManager.shared
+    }
 
     /// Memory service (implements MemoryManager protocol)
-    private(set) lazy var memoryService: MemoryManager = {
-        MemoryService(
-            allocationManager: AllocationManager(),
-            pressureHandler: PressureHandler(),
-            cacheEviction: CacheEviction()
-        )
-    }()
+    public var memoryService: MemoryManager {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(MemoryService.self)
+    }
 
     /// Error recovery service
-    private(set) lazy var errorRecoveryService: ErrorRecoveryService = {
-        ErrorRecoveryService()
-    }()
+    public var errorRecoveryService: ErrorRecoveryService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(ErrorRecoveryService.self)
+    }
 
     /// Compatibility service
-    private(set) lazy var compatibilityService: CompatibilityService = {
-        CompatibilityService()
-    }()
+    public var compatibilityService: CompatibilityService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(CompatibilityService.self)
+    }
 
     /// Tokenization service
-    private(set) lazy var tokenizerService: TokenizerService = {
-        TokenizerService()
-    }()
+    public var tokenizerService: TokenizerService {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(TokenizerService.self)
+    }
 
     /// Format detector for model validation
-    private(set) lazy var formatDetector: FormatDetector = {
-        FormatDetectorImpl()
-    }()
+    public var formatDetector: FormatDetector {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(FormatDetector.self)
+    }
 
     /// Metadata extractor for model validation
-    private(set) lazy var metadataExtractor: MetadataExtractor = {
-        MetadataExtractorImpl()
-    }()
+    public var metadataExtractor: MetadataExtractor {
+        guard let resolver = resolver else {
+            fatalError("ServiceContainer not initialized. Call bootstrap() first.")
+        }
+        return resolver.resolveRequired(MetadataExtractor.self)
+    }
 
     /// Logger
-    private(set) lazy var logger: SDKLogger = {
-        SDKLogger()
-    }()
+    public var logger: SDKLogger {
+        guard let resolver = resolver else {
+            // Allow logger to be created before bootstrap for early logging
+            return SDKLogger()
+        }
+        return resolver.resolveRequired(SDKLogger.self)
+    }
 
     /// Configuration service (either ConfigurationService or InMemoryConfigurationService)
     private var _configurationService: ConfigurationServiceProtocol?
@@ -286,59 +339,18 @@ public class ServiceContainer {
 
     /// Bootstrap all services with configuration
     public func bootstrap(with configuration: Configuration) async throws {
-        // Logger is pre-configured through LoggingManager
+        // Initialize the SDKAssembler with the configuration
+        self.assembler = SDKAssembler(configuration: configuration)
 
-        // Initialize configuration service with repository
-        if let db = await database {
-            let configRepository = ConfigurationRepositoryImpl(
-                database: db,
-                apiClient: apiClient
-            )
-            _configurationService = ConfigurationService(
-                configRepository: configRepository
-            )
+        // The assembler now handles all service initialization through Swinject
+        // All services are configured through their respective assemblies
 
-            // Ensure configuration is loaded immediately
-            if let configService = _configurationService {
-                await configService.ensureConfigurationLoaded()
-                logger.info("Configuration loaded during SDK initialization")
-            }
-        } else {
-            // DATABASE DISABLED: Create in-memory configuration service
-            logger.warning("Database unavailable - creating in-memory configuration service")
-            _configurationService = InMemoryConfigurationService()
-            logger.info("In-memory configuration service created")
+        // Start service health monitoring if enabled
+        if configuration.enableMonitoring {
+            await startHealthMonitoring()
         }
 
-        // Initialize API client if API key is provided
-        if !configuration.apiKey.isEmpty {
-            apiClient = APIClient(
-                baseURL: "https://api.runanywhere.ai",
-                apiKey: configuration.apiKey
-            )
-        }
-
-        // Initialize core services
-        // Initialize model registry with configuration
-        await (modelRegistry as? RegistryService)?.initialize(with: configuration)
-
-        // Configure hardware preferences
-        // Hardware manager is self-configuring
-
-        // Set memory threshold
-        memoryService.setMemoryThreshold(configuration.memoryThreshold)
-
-        // Configure download settings
-        // Download service is configured via its initializer
-
-        // Initialize monitoring if enabled
-        if configuration.enableRealTimeDashboard {
-            performanceMonitor.startMonitoring()
-            // Storage monitoring is now handled by SimplifiedFileManager
-        }
-
-        // Start service health monitoring
-        await startHealthMonitoring()
+        logger.info("ServiceContainer bootstrapped with Swinject assembler")
     }
 
     /// Check health of all services
@@ -399,104 +411,5 @@ public class ServiceContainer {
     private func checkTokenizerServiceHealth() async -> Bool {
         // Check tokenizer service
         return tokenizerService.isHealthy()
-    }
-}
-
-// MARK: - Private Implementation Classes
-
-private class FrameworkAdapterRegistryImpl: FrameworkAdapterRegistry {
-    private var adapters: [LLMFramework: FrameworkAdapter] = [:]
-
-    func getAdapter(for framework: LLMFramework) -> FrameworkAdapter? {
-        return adapters[framework]
-    }
-
-    func findBestAdapter(for model: ModelInfo) -> FrameworkAdapter? {
-        // First try preferred framework
-        if let preferred = model.preferredFramework,
-           let adapter = adapters[preferred] {
-            return adapter
-        }
-
-        // Then try compatible frameworks
-        for framework in model.compatibleFrameworks {
-            if let adapter = adapters[framework] {
-                return adapter
-            }
-        }
-
-        return nil
-    }
-
-    func register(_ adapter: FrameworkAdapter) {
-        adapters[adapter.framework] = adapter
-    }
-
-    func getRegisteredAdapters() -> [LLMFramework: FrameworkAdapter] {
-        return adapters
-    }
-
-    func getAvailableFrameworks() -> [LLMFramework] {
-        return Array(adapters.keys)
-    }
-
-    func getFrameworkAvailability() -> [FrameworkAvailability] {
-        let registeredFrameworks = Set(adapters.keys)
-
-        return LLMFramework.allCases.map { framework in
-            let isAvailable = registeredFrameworks.contains(framework)
-            let capability = FrameworkCapabilities.getCapability(for: framework)
-
-            return FrameworkAvailability(
-                framework: framework,
-                isAvailable: isAvailable,
-                unavailabilityReason: isAvailable ? nil : "Framework adapter not registered",
-                requirements: getFrameworkRequirements(framework),
-                recommendedFor: getRecommendedUseCases(framework),
-                supportedFormats: capability?.supportedFormats.map { $0 } ?? []
-            )
-        }
-    }
-
-    // MARK: - Private Helper Methods
-
-    private func getFrameworkRequirements(_ framework: LLMFramework) -> [HardwareRequirement] {
-        switch framework {
-        case .coreML, .foundationModels:
-            return [.requiresNeuralEngine] // Optimal with Neural Engine
-        case .tensorFlowLite, .mediaPipe:
-            return [.requiresGPU] // Better with GPU
-        case .mlx:
-            return [.requiresGPU, .requiresAppleSilicon]
-        default:
-            return []
-        }
-    }
-
-    private func getRecommendedUseCases(_ framework: LLMFramework) -> [String] {
-        switch framework {
-        case .coreML:
-            return ["On-device inference", "Privacy-focused applications", "iOS/macOS apps"]
-        case .tensorFlowLite:
-            return ["Cross-platform deployment", "Mobile applications", "Edge computing"]
-        case .mlx:
-            return ["Apple Silicon optimization", "Research", "High-performance computing"]
-        case .onnx:
-            return ["Cross-platform models", "Framework interoperability", "Production deployment"]
-        case .llamaCpp:
-            return ["CPU-optimized inference", "Quantized models", "Resource-constrained environments"]
-        case .foundationModels:
-            return ["Apple ecosystem integration", "System-level features", "Privacy-first AI"]
-        case .mediaPipe:
-            return ["Real-time processing", "Computer vision", "Audio processing"]
-        case .swiftTransformers:
-            return ["Swift-native development", "Research", "Custom implementations"]
-        case .execuTorch:
-            return ["Mobile deployment", "Edge devices", "Real-time inference"]
-        case .picoLLM:
-            return ["Voice assistants", "Keyword spotting", "Ultra-low latency"]
-        case .mlc:
-            return ["Mobile LLM deployment", "Optimized inference", "Memory efficiency"]
-        }
     }
 }
