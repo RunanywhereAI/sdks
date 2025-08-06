@@ -6,7 +6,7 @@ public class ModelLoadingService {
     private let adapterRegistry: FrameworkAdapterRegistry
     private let validationService: ValidationService
     private let memoryService: MemoryManager // Using MemoryManager protocol for now
-    private let logger = SDKLogger(category: "ModelLoadingService")
+    private let logger: SDKLogger
 
     private var loadedModels: [String: LoadedModel] = [:]
 
@@ -14,12 +14,14 @@ public class ModelLoadingService {
         registry: ModelRegistry,
         adapterRegistry: FrameworkAdapterRegistry,
         validationService: ValidationService,
-        memoryService: MemoryManager
+        memoryService: MemoryManager,
+        logger: SDKLogger
     ) {
         self.registry = registry
         self.adapterRegistry = adapterRegistry
         self.validationService = validationService
         self.memoryService = memoryService
+        self.logger = logger
     }
 
     /// Load a model by identifier

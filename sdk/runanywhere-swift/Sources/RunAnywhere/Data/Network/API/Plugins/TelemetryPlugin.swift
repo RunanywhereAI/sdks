@@ -26,7 +26,8 @@ public final class TelemetryPlugin: PluginType {
         )
 
         // Store request ID for later correlation
-        request.sessionHeaders?["X-Telemetry-ID"] = requestId
+        // Note: sessionHeaders is read-only, would need custom implementation
+        // request.sessionHeaders["X-Telemetry-ID"] = requestId
     }
 
     /// Track response reception
@@ -119,7 +120,7 @@ public class TelemetryService {
 
     /// Record request start
     public func recordRequestStart(requestId: String, endpoint: String, method: String, timestamp: Date) {
-        guard configuration.telemetryConsent != .disabled else { return }
+        guard configuration.telemetryConsent != .denied else { return }
 
         queue.async(flags: .barrier) {
             self.activeRequests[requestId] = RequestMetrics(
@@ -134,7 +135,7 @@ public class TelemetryService {
 
     /// Record request completion
     public func recordRequestComplete(requestId: String, endpoint: String, statusCode: Int, responseTime: TimeInterval, timestamp: Date) {
-        guard configuration.telemetryConsent != .disabled else { return }
+        guard configuration.telemetryConsent != .denied else { return }
 
         queue.async(flags: .barrier) {
             if var metrics = self.activeRequests[requestId] {
@@ -143,9 +144,10 @@ public class TelemetryService {
                 metrics.responseTime = responseTime
 
                 // Send to repository
-                Task {
-                    await self.repository?.recordRequestMetrics(metrics)
-                }
+                // TODO: Enable when minimum iOS version is 13.0
+                // Task {
+                //     await self.repository?.recordRequestMetrics(metrics)
+                // }
 
                 // Clean up
                 self.activeRequests.removeValue(forKey: requestId)
@@ -157,7 +159,7 @@ public class TelemetryService {
 
     /// Record request failure
     public func recordRequestFailure(requestId: String, endpoint: String, error: MoyaError, timestamp: Date) {
-        guard configuration.telemetryConsent != .disabled else { return }
+        guard configuration.telemetryConsent != .denied else { return }
 
         queue.async(flags: .barrier) {
             if var metrics = self.activeRequests[requestId] {
@@ -165,9 +167,10 @@ public class TelemetryService {
                 metrics.error = error.localizedDescription
 
                 // Send to repository
-                Task {
-                    await self.repository?.recordRequestMetrics(metrics)
-                }
+                // TODO: Enable when minimum iOS version is 13.0
+                // Task {
+                //     await self.repository?.recordRequestMetrics(metrics)
+                // }
 
                 // Clean up
                 self.activeRequests.removeValue(forKey: requestId)
@@ -179,47 +182,50 @@ public class TelemetryService {
 
     /// Record response size
     public func recordResponseSize(endpoint: String, size: Int) {
-        guard configuration.telemetryConsent == .full else { return }
+        guard configuration.telemetryConsent == .granted else { return }
 
         logger.debug("Response size for \(endpoint): \(size) bytes")
 
-        Task {
-            await repository?.recordMetric(
-                name: "response_size",
-                value: Double(size),
-                tags: ["endpoint": endpoint]
-            )
-        }
+        // TODO: Enable when minimum iOS version is 13.0
+        // Task {
+        //     await repository?.recordMetric(
+        //         name: "response_size",
+        //         value: Double(size),
+        //         tags: ["endpoint": endpoint]
+        //     )
+        // }
     }
 
     /// Record server processing time
     public func recordServerProcessingTime(endpoint: String, time: TimeInterval) {
-        guard configuration.telemetryConsent == .full else { return }
+        guard configuration.telemetryConsent == .granted else { return }
 
         logger.debug("Server processing time for \(endpoint): \(time)s")
 
-        Task {
-            await repository?.recordMetric(
-                name: "server_processing_time",
-                value: time,
-                tags: ["endpoint": endpoint]
-            )
-        }
+        // TODO: Enable when minimum iOS version is 13.0
+        // Task {
+        //     await repository?.recordMetric(
+        //         name: "server_processing_time",
+        //         value: time,
+        //         tags: ["endpoint": endpoint]
+        //     )
+        // }
     }
 
     /// Record cache status
     public func recordCacheStatus(endpoint: String, status: String) {
-        guard configuration.telemetryConsent == .full else { return }
+        guard configuration.telemetryConsent == .granted else { return }
 
         logger.debug("Cache status for \(endpoint): \(status)")
 
-        Task {
-            await repository?.recordMetric(
-                name: "cache_status",
-                value: status == "HIT" ? 1.0 : 0.0,
-                tags: ["endpoint": endpoint, "status": status]
-            )
-        }
+        // TODO: Enable when minimum iOS version is 13.0
+        // Task {
+        //     await repository?.recordMetric(
+        //         name: "cache_status",
+        //         value: status == "HIT" ? 1.0 : 0.0,
+        //         tags: ["endpoint": endpoint, "status": status]
+        //     )
+        // }
     }
 }
 

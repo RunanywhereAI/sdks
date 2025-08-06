@@ -7,7 +7,7 @@ import AppKit
 
 /// Monitors system memory usage and provides real-time statistics
 class MemoryMonitor {
-    private let logger = SDKLogger(category: "MemoryMonitor")
+    private let logger: SDKLogger
     private var monitoringTimer: Timer?
     private var thresholdWatcher: ThresholdWatcher?
     private var isMonitoring = false
@@ -17,7 +17,8 @@ class MemoryMonitor {
     private var statisticsCallback: ((MemoryMonitoringStats) -> Void)?
     private var thresholdCallbacks: [MemoryThreshold: () -> Void] = [:]
 
-    init() {
+    init(logger: SDKLogger) {
+        self.logger = logger
         thresholdWatcher = ThresholdWatcher()
         setupThresholdWatcher()
     }

@@ -4,6 +4,16 @@ import Swinject
 /// Assembly for model loading and validation services
 final class ModelLoadingAssembly: Assembly {
     func assemble(container: Container) {
+        // Model Registry - Points to RegistryService
+        container.register(ModelRegistry.self) { resolver in
+            resolver.resolve(RegistryService.self)!
+        }
+
+        // Memory Manager - Points to MemoryService
+        container.register(MemoryManager.self) { resolver in
+            resolver.resolve(MemoryService.self)!
+        }
+
         // Framework Adapter Registry - Using existing implementation
         // This would be replaced once framework adapters are implemented
         container.register(FrameworkAdapterRegistry.self) { resolver in
@@ -14,26 +24,24 @@ final class ModelLoadingAssembly: Assembly {
         .inObjectScope(.container)
 
         // Model Validation Services
-        container.register(ChecksumValidator.self) { resolver in
-            ChecksumValidator(logger: resolver.resolve(SDKLogger.self)!)
+        container.register(ChecksumValidator.self) { _ in
+            ChecksumValidator()
         }
         .inObjectScope(.container)
 
         container.register(DependencyChecker.self) { resolver in
             DependencyChecker(
-                frameworkRegistry: resolver.resolve(FrameworkAdapterRegistry.self)!,
-                logger: resolver.resolve(SDKLogger.self)!
+                frameworkRegistry: resolver.resolve(FrameworkAdapterRegistry.self)!
             )
         }
         .inObjectScope(.container)
 
         container.register(ValidationService.self) { resolver in
             ValidationService(
-                checksumValidator: resolver.resolve(ChecksumValidator.self)!,
-                dependencyChecker: resolver.resolve(DependencyChecker.self)!,
-                formatDetector: resolver.resolve(FormatDetector.self)!,
-                metadataExtractor: resolver.resolve(MetadataExtractor.self)!,
-                logger: resolver.resolve(SDKLogger.self)!
+                formatDetector: resolver.resolve(FormatDetector.self),
+                metadataExtractor: resolver.resolve(MetadataExtractor.self),
+                checksumValidator: resolver.resolve(ChecksumValidator.self),
+                dependencyChecker: resolver.resolve(DependencyChecker.self)
             )
         }
         .inObjectScope(.container)
@@ -41,11 +49,10 @@ final class ModelLoadingAssembly: Assembly {
         // Model Loading Service
         container.register(ModelLoadingService.self) { resolver in
             ModelLoadingService(
-                frameworkRegistry: resolver.resolve(FrameworkAdapterRegistry.self)!,
+                registry: resolver.resolve(ModelRegistry.self)!,
+                adapterRegistry: resolver.resolve(FrameworkAdapterRegistry.self)!,
                 validationService: resolver.resolve(ValidationService.self)!,
-                downloadService: resolver.resolve(AlamofireDownloadService.self)!,
-                storageManager: resolver.resolve(ModelStorageManager.self)!,
-                progressService: resolver.resolve(ProgressService.self)!,
+                memoryService: resolver.resolve(MemoryManager.self)!,
                 logger: resolver.resolve(SDKLogger.self)!
             )
         }
@@ -73,25 +80,14 @@ final class ModelLoadingAssembly: Assembly {
         .inObjectScope(.container)
 
         // Registry Service
-        container.register(RegistryService.self) { resolver in
-            RegistryService(
-                repository: resolver.resolve(ModelMetadataRepository.self)!,
-                discoveryService: ModelDiscovery(),
-                updater: RegistryUpdater(),
-                cache: RegistryCache(),
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+        container.register(RegistryService.self) { _ in
+            RegistryService()
         }
         .inObjectScope(.container)
 
         // Tokenization Service
-        container.register(TokenizerService.self) { resolver in
-            TokenizerService(
-                cache: TokenizerCache(),
-                configurationBuilder: ConfigurationBuilder(),
-                formatDetector: TokenizerFormatDetector(),
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+        container.register(TokenizerService.self) { _ in
+            TokenizerService()
         }
         .inObjectScope(.container)
     }

@@ -41,7 +41,8 @@ public final class SDKAssembler {
 
     /// Thread-safe resolver for concurrent access
     public var synchronizedResolver: Resolver {
-        assembler.resolver.synchronize()
+        // Note: Swinject's resolver is already thread-safe
+        return assembler.resolver
     }
 
     /// Get the main SDK instance

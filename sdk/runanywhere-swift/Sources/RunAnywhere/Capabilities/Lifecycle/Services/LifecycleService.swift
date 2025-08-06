@@ -5,16 +5,18 @@ class LifecycleService {
     private let stateManager: StateManager
     private let transitionHandler: TransitionHandler
     private let observerRegistry: ObserverRegistry
-    private let logger = SDKLogger(category: "LifecycleService")
+    private let logger: SDKLogger
 
     init(
         stateManager: StateManager = StateManager(),
         transitionHandler: TransitionHandler = TransitionHandler(),
-        observerRegistry: ObserverRegistry = ObserverRegistry()
+        observerRegistry: ObserverRegistry = ObserverRegistry(),
+        logger: SDKLogger
     ) {
         self.stateManager = stateManager
         self.transitionHandler = transitionHandler
         self.observerRegistry = observerRegistry
+        self.logger = logger
 
         setupIntegration()
     }

@@ -148,7 +148,7 @@ extension RunAnywhereAPI: TargetType {
 
         // Add SDK-specific headers
         headers["X-SDK-Version"] = SDKConstants.version
-        headers["X-SDK-Platform"] = SDKConstants.platform
+        headers["X-SDK-Platform"] = "iOS"  // Or determine platform dynamically
         headers["X-SDK-Language"] = "Swift"
 
         return headers

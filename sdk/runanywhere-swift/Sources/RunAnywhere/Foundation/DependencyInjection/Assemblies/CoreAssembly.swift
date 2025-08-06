@@ -12,45 +12,33 @@ final class CoreAssembly: Assembly {
         // Logging Configuration
         container.register(LoggingConfiguration.self) { resolver in
             let sdkConfig = resolver.resolve(Configuration.self)!
-            return LoggingConfiguration(
-                level: sdkConfig.debugMode ? .debug : .info,
-                enableConsoleLogging: true,
-                enableFileLogging: false,
-                enableRemoteLogging: false
-            )
+            var config = LoggingConfiguration()
+            config.minLogLevel = sdkConfig.debugMode ? .debug : .info
+            config.enableLocalLogging = true
+            config.enableRemoteLogging = false
+            return config
         }
 
         // Remote Logger
-        container.register(RemoteLogger.self) { resolver in
-            let config = resolver.resolve(Configuration.self)!
-            return RemoteLogger(
-                apiClient: resolver.resolve(APIClient.self),
-                configuration: config,
-                enabled: false
-            )
+        container.register(RemoteLogger.self) { _ in
+            RemoteLogger()
         }
 
-        // Logging Manager
-        container.register(LoggingManager.self) { resolver in
-            LoggingManager(
-                configuration: resolver.resolve(LoggingConfiguration.self)!,
-                remoteLogger: resolver.resolve(RemoteLogger.self)
-            )
+        // Logging Manager - Uses singleton
+        container.register(LoggingManager.self) { _ in
+            LoggingManager.shared
         }
         .inObjectScope(.container)
 
-        // Environment Configuration
+        // Environment Configuration - Uses current configuration
         container.register(EnvironmentConfiguration.self) { _ in
-            EnvironmentConfiguration()
+            EnvironmentConfiguration.current
         }
         .inObjectScope(.container)
 
         // SDK Logger
-        container.register(SDKLogger.self) { resolver in
-            SDKLogger(
-                loggingManager: resolver.resolve(LoggingManager.self)!,
-                identifier: "RunAnywhereSDK"
-            )
+        container.register(SDKLogger.self) { _ in
+            SDKLogger(category: "RunAnywhereSDK")
         }
         .inObjectScope(.container)
 

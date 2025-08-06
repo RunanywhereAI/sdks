@@ -66,6 +66,7 @@ public final class CostTrackingPlugin: PluginType {
 }
 
 /// Service for tracking API costs and usage
+@available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
 public class CostTrackingService {
 
     private let repository: TelemetryRepository?
@@ -95,13 +96,14 @@ public class CostTrackingService {
             self.logger.debug("API cost recorded: \(cost) for endpoint: \(endpoint)")
 
             // Store in repository if available
-            Task {
-                await self.repository?.recordCostMetric(
-                    endpoint: endpoint,
-                    cost: cost,
-                    timestamp: timestamp
-                )
-            }
+            // TODO: Enable when minimum iOS version is 13.0
+            // Task {
+            //     await self.repository?.recordCostMetric(
+            //         endpoint: endpoint,
+            //         cost: cost,
+            //         timestamp: timestamp
+            //     )
+            // }
         }
     }
 
@@ -112,13 +114,14 @@ public class CostTrackingService {
             self.logger.debug("Token usage recorded: \(tokens) for endpoint: \(endpoint)")
 
             // Store in repository if available
-            Task {
-                await self.repository?.recordTokenMetric(
-                    endpoint: endpoint,
-                    tokens: tokens,
-                    timestamp: timestamp
-                )
-            }
+            // TODO: Enable when minimum iOS version is 13.0
+            // Task {
+            //     await self.repository?.recordTokenMetric(
+            //         endpoint: endpoint,
+            //         tokens: tokens,
+            //         timestamp: timestamp
+            //     )
+            // }
         }
     }
 
@@ -127,13 +130,14 @@ public class CostTrackingService {
         logger.debug("Execution target recorded: \(target) for endpoint: \(endpoint)")
 
         // Store in repository if available
-        Task {
-            await repository?.recordExecutionTarget(
-                endpoint: endpoint,
-                target: target,
-                timestamp: timestamp
-            )
-        }
+        // TODO: Enable when minimum iOS version is 13.0
+        // Task {
+        //     await repository?.recordExecutionTarget(
+        //         endpoint: endpoint,
+        //         target: target,
+        //         timestamp: timestamp
+        //     )
+        // }
     }
 
     /// Update rate limit information

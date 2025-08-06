@@ -8,10 +8,10 @@
 import Foundation
 
 /// Simple logging utility that handles iOS version compatibility
-internal struct SDKLogger {
+public struct SDKLogger {
     private let category: String
 
-    init(category: String = "SDK") {
+    public init(category: String = "SDK") {
         self.category = category
     }
 

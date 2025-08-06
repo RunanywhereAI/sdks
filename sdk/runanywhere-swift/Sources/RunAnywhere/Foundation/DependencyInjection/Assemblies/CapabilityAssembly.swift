@@ -20,64 +20,59 @@ final class CapabilityAssembly: Assembly {
         }
         .inObjectScope(.container)
 
-        container.register(HardwareDetectionService.self) { resolver in
-            HardwareDetectionService(
-                processorDetector: resolver.resolve(ProcessorDetector.self)!,
-                gpuDetector: resolver.resolve(GPUDetector.self)!,
-                neuralEngineDetector: resolver.resolve(NeuralEngineDetector.self)!,
+        // Battery and Thermal Monitoring
+        container.register(BatteryMonitorService.self) { resolver in
+            BatteryMonitorService(
                 logger: resolver.resolve(SDKLogger.self)!
             )
         }
         .inObjectScope(.container)
 
-        // Battery and Thermal Monitoring
-        container.register(BatteryMonitorService.self) { resolver in
-            BatteryMonitorService(logger: resolver.resolve(SDKLogger.self)!)
-        }
-        .inObjectScope(.container)
-
         container.register(ThermalMonitorService.self) { resolver in
-            ThermalMonitorService(logger: resolver.resolve(SDKLogger.self)!)
+            ThermalMonitorService(
+                logger: resolver.resolve(SDKLogger.self)!
+            )
         }
         .inObjectScope(.container)
 
         // Capability Analyzer
         container.register(CapabilityAnalyzer.self) { resolver in
             CapabilityAnalyzer(
-                hardwareService: resolver.resolve(HardwareDetectionService.self)!,
-                batteryService: resolver.resolve(BatteryMonitorService.self)!,
-                thermalService: resolver.resolve(ThermalMonitorService.self)!,
-                logger: resolver.resolve(SDKLogger.self)!
+                processorDetector: resolver.resolve(ProcessorDetector.self),
+                neuralEngineDetector: resolver.resolve(NeuralEngineDetector.self),
+                gpuDetector: resolver.resolve(GPUDetector.self)
             )
         }
         .inObjectScope(.container)
 
         // Compatibility Services
-        container.register(CompatibilityService.self) { resolver in
-            CompatibilityService(
-                hardwareService: resolver.resolve(HardwareDetectionService.self)!,
-                frameworkRegistry: resolver.resolve(FrameworkAdapterRegistry.self)!,
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+        container.register(CompatibilityService.self) { _ in
+            CompatibilityService()
         }
         .inObjectScope(.container)
 
         container.register(FrameworkRecommender.self) { resolver in
             FrameworkRecommender(
-                compatibilityService: resolver.resolve(CompatibilityService.self)!,
-                logger: resolver.resolve(SDKLogger.self)!
+                compatibilityService: resolver.resolve(CompatibilityService.self)!
             )
         }
         .inObjectScope(.container)
 
-        // Cost Estimation Service
-        container.register(CostEstimationService.self) { resolver in
-            CostEstimationService(
-                configuration: resolver.resolve(Configuration.self)!,
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+        // Cost Calculator
+        container.register(CostCalculator.self) { _ in
+            CostCalculator()
         }
         .inObjectScope(.container)
+
+        // Resource Checker
+        container.register(ResourceChecker.self) { resolver in
+            ResourceChecker(hardwareManager: HardwareCapabilityManager.shared)
+        }
+        .inObjectScope(.container)
+
+        // Cost Estimation Service - placeholder for now
+        // Note: CostEstimationService is not yet defined
+        // Will be implemented when needed
 
         // Cost Tracking Service
         container.register(CostTrackingService.self) { resolver in
@@ -90,11 +85,9 @@ final class CapabilityAssembly: Assembly {
 
         // Routing Service
         container.register(RoutingService.self) { resolver in
-            let configuration = resolver.resolve(Configuration.self)!
             return RoutingService(
-                configuration: configuration.routing,
-                hardwareService: resolver.resolve(HardwareDetectionService.self)!,
-                costEstimator: resolver.resolve(CostEstimationService.self)!,
+                costCalculator: resolver.resolve(CostCalculator.self)!,
+                resourceChecker: resolver.resolve(ResourceChecker.self)!,
                 logger: resolver.resolve(SDKLogger.self)!
             )
         }
@@ -103,9 +96,7 @@ final class CapabilityAssembly: Assembly {
         // Configuration Service
         container.register(ConfigurationServiceProtocol.self) { resolver in
             ConfigurationService(
-                repository: resolver.resolve(ConfigurationRepository.self)!,
-                validator: resolver.resolve(ConfigurationValidator.self)!,
-                logger: resolver.resolve(SDKLogger.self)!
+                configRepository: resolver.resolve(ConfigurationRepository.self)!
             )
         }
         .inObjectScope(.container)
@@ -122,13 +113,15 @@ final class CapabilityAssembly: Assembly {
 
         // Memory Services
         container.register(MemoryMonitor.self) { resolver in
-            MemoryMonitor(logger: resolver.resolve(SDKLogger.self)!)
+            MemoryMonitor(
+                logger: resolver.resolve(SDKLogger.self)!
+            )
         }
         .inObjectScope(.container)
 
         container.register(MemoryService.self) { resolver in
             MemoryService(
-                monitor: resolver.resolve(MemoryMonitor.self)!,
+                memoryMonitor: resolver.resolve(MemoryMonitor.self)!,
                 logger: resolver.resolve(SDKLogger.self)!
             )
         }
@@ -136,45 +129,35 @@ final class CapabilityAssembly: Assembly {
 
         // Lifecycle Service
         container.register(LifecycleService.self) { resolver in
-            LifecycleService(logger: resolver.resolve(SDKLogger.self)!)
+            LifecycleService(
+                logger: resolver.resolve(SDKLogger.self)!
+            )
         }
         .inObjectScope(.container)
 
         // Progress Service
         container.register(ProgressService.self) { resolver in
-            ProgressService(logger: resolver.resolve(SDKLogger.self)!)
+            ProgressService(
+                logger: resolver.resolve(SDKLogger.self)!
+            )
         }
         .inObjectScope(.container)
 
         // Monitoring Service
-        container.register(MonitoringService.self) { resolver in
-            MonitoringService(
-                systemMetricsCollector: SystemMetricsCollector(),
-                alertManager: AlertManager(),
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+        container.register(MonitoringService.self) { _ in
+            MonitoringService.shared
         }
         .inObjectScope(.container)
 
         // Profiling Service
-        container.register(ProfilerService.self) { resolver in
-            ProfilerService(
-                memoryAnalyzer: MemoryAnalyzer(),
-                allocationTracker: AllocationTracker(),
-                leakDetector: LeakDetector(),
-                recommendationEngine: RecommendationEngine(),
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+        container.register(ProfilerService.self) { _ in
+            ProfilerService.shared
         }
         .inObjectScope(.container)
 
         // Error Recovery Service
-        container.register(ErrorRecoveryService.self) { resolver in
-            ErrorRecoveryService(
-                strategySelector: StrategySelector(),
-                recoveryExecutor: RecoveryExecutor(),
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+        container.register(ErrorRecoveryService.self) { _ in
+            ErrorRecoveryService()
         }
         .inObjectScope(.container)
     }

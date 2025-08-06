@@ -53,30 +53,17 @@ final class PublicAssembly: Assembly {
 
         // Benchmarking Service
         container.register(BenchmarkService.self) { resolver in
-            BenchmarkService(
-                executor: BenchmarkExecutor(
-                    generationService: resolver.resolve(GenerationService.self)!,
-                    logger: resolver.resolve(SDKLogger.self)!
-                ),
-                metricsAggregator: BenchmarkMetricsAggregator(),
-                reportGenerator: BenchmarkReportGenerator(),
-                comparisonEngine: ComparisonEngine(),
-                promptManager: PromptManager(),
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+            // Note: BenchmarkService initialization needs to be fixed
+            // once its dependencies are properly defined
+            fatalError("BenchmarkService initialization not yet implemented")
         }
         .inObjectScope(.container)
 
         // A/B Testing Service
         container.register(ABTestService.self) { resolver in
-            ABTestService(
-                lifecycleManager: TestLifecycleManager(),
-                variantManager: VariantManager(),
-                metricsCollector: TestMetricsCollector(),
-                resultAnalyzer: ResultAnalyzer(),
-                generationTracker: ABTestGenerationTracker(),
-                logger: resolver.resolve(SDKLogger.self)!
-            )
+            // Note: ABTestService initialization needs to be fixed
+            // once its dependencies are properly defined
+            fatalError("ABTestService initialization not yet implemented")
         }
         .inObjectScope(.container)
 

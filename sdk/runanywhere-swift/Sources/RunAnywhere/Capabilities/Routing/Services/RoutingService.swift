@@ -4,14 +4,16 @@ import Foundation
 public class RoutingService {
     private let costCalculator: CostCalculator
     private let resourceChecker: ResourceChecker
-    private let logger = SDKLogger(category: "RoutingService")
+    private let logger: SDKLogger
 
     public init(
         costCalculator: CostCalculator,
-        resourceChecker: ResourceChecker
+        resourceChecker: ResourceChecker,
+        logger: SDKLogger
     ) {
         self.costCalculator = costCalculator
         self.resourceChecker = resourceChecker
+        self.logger = logger
     }
 
     /// Determine the optimal routing for a generation request

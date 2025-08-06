@@ -2,10 +2,12 @@ import Foundation
 
 /// Service for monitoring device thermal state
 public actor ThermalMonitorService {
-    private let logger = SDKLogger(category: "ThermalMonitor")
+    private let logger: SDKLogger
     private var observers: [UUID: (ThermalState) -> Void] = [:]
 
-    public init() {}
+    public init(logger: SDKLogger) {
+        self.logger = logger
+    }
 
     /// Get current thermal state
     public func getCurrentThermalState() -> ThermalState {

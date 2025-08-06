@@ -46,17 +46,17 @@ final class NetworkAssembly: Assembly {
                 MoyaProvider.defaultEndpointMapping(for: target)
                     .adding(newHTTPHeaderFields: [
                         "X-SDK-Version": SDKConstants.version,
-                        "X-Platform": SDKConstants.platform,
+                        "X-Platform": "iOS",
                         "X-SDK-Language": "Swift"
                     ])
             }
 
             // Custom session configuration
-            let configuration = URLSessionConfiguration.default
-            configuration.timeoutIntervalForRequest = 30
-            configuration.timeoutIntervalForResource = 300
+            let sessionConfig = URLSessionConfiguration.default
+            sessionConfig.timeoutIntervalForRequest = 30
+            sessionConfig.timeoutIntervalForResource = 300
 
-            let session = Session(configuration: configuration)
+            let session = Session(configuration: sessionConfig)
 
             return MoyaProvider<RunAnywhereAPI>(
                 endpointClosure: endpointClosure,
@@ -67,8 +67,8 @@ final class NetworkAssembly: Assembly {
         }
         .inObjectScope(.container)
 
-        // API Client using Moya
-        container.register(APIClient.self) { resolver in
+        // Moya API Client
+        container.register(MoyaAPIClient.self) { resolver in
             let provider = resolver.resolve(MoyaProvider<RunAnywhereAPI>.self)!
             let logger = resolver.resolve(SDKLogger.self)!
 
@@ -81,10 +81,19 @@ final class NetworkAssembly: Assembly {
         }
         .inObjectScope(.container)
 
+        // Legacy API Client (will be replaced by Moya eventually)
+        container.register(APIClient.self) { resolver in
+            let config = resolver.resolve(Configuration.self)!
+            return APIClient(
+                baseURL: config.baseURL.absoluteString,
+                apiKey: config.apiKey
+            )
+        }
+        .inObjectScope(.container)
+
         // Legacy Alamofire Download Service (will be migrated later)
-        container.register(AlamofireDownloadService.self) { resolver in
-            let logger = resolver.resolve(SDKLogger.self)!
-            return AlamofireDownloadService(logger: logger)
+        container.register(AlamofireDownloadService.self) { _ in
+            return AlamofireDownloadService()
         }
         .inObjectScope(.container)
     }

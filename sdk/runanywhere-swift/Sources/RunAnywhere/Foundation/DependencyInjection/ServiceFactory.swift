@@ -39,7 +39,8 @@ public class ServiceFactory {
             registry: container.modelRegistry,
             adapterRegistry: container.adapterRegistry,
             validationService: container.validationService,
-            memoryService: container.memoryService
+            memoryService: container.memoryService,
+            logger: SDKLogger(category: "ModelLoadingService")
         )
     }
 

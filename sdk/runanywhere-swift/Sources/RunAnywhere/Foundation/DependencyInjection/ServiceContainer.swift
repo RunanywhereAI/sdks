@@ -346,7 +346,7 @@ public class ServiceContainer {
         // All services are configured through their respective assemblies
 
         // Start service health monitoring if enabled
-        if configuration.enableMonitoring {
+        if configuration.enableRealTimeDashboard {
             await startHealthMonitoring()
         }
 
