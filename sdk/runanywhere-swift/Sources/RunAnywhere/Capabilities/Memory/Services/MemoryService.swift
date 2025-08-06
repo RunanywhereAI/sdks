@@ -11,18 +11,20 @@ class MemoryService: MemoryManager {
     private let pressureHandler: PressureHandler
     private let cacheEviction: CacheEviction
     private let memoryMonitor: MemoryMonitor
-    private let logger = SDKLogger(category: "MemoryService")
+    private let logger: SDKLogger
 
     init(
         allocationManager: AllocationManager = AllocationManager(),
         pressureHandler: PressureHandler = PressureHandler(),
         cacheEviction: CacheEviction = CacheEviction(),
-        memoryMonitor: MemoryMonitor = MemoryMonitor()
+        memoryMonitor: MemoryMonitor,
+        logger: SDKLogger
     ) {
         self.allocationManager = allocationManager
         self.pressureHandler = pressureHandler
         self.cacheEviction = cacheEviction
         self.memoryMonitor = memoryMonitor
+        self.logger = logger
 
         setupIntegration()
     }

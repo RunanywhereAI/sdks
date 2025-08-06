@@ -5,9 +5,10 @@ import UIKit
 
 /// Service for monitoring device battery state
 public actor BatteryMonitorService {
-    private let logger = SDKLogger(category: "BatteryMonitor")
+    private let logger: SDKLogger
 
-    public init() {
+    public init(logger: SDKLogger) {
+        self.logger = logger
         #if os(iOS)
         UIDevice.current.isBatteryMonitoringEnabled = true
         #endif

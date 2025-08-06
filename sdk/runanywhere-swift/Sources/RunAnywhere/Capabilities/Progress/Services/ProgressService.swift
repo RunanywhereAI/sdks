@@ -27,7 +27,7 @@ public class ProgressService: ProgressTracker {
     private let progressSubject = PassthroughSubject<OverallProgress, Never>()
 
     /// Logger
-    private let logger = SDKLogger(category: "ProgressService")
+    private let logger: SDKLogger
 
     // MARK: - Types
 
@@ -43,10 +43,12 @@ public class ProgressService: ProgressTracker {
 
     public init(
         stageManager: StageManager? = nil,
-        progressAggregator: ProgressAggregator? = nil
+        progressAggregator: ProgressAggregator? = nil,
+        logger: SDKLogger
     ) {
         self.stageManager = stageManager ?? StageManager()
         self.progressAggregator = progressAggregator ?? ProgressAggregator()
+        self.logger = logger
     }
 
     // MARK: - ProgressTracker Protocol

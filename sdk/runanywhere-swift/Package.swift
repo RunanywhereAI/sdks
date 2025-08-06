@@ -20,7 +20,9 @@ let package = Package(
         .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.9.0"),
         .package(url: "https://github.com/JohnSundell/Files.git", from: "4.3.0"),
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.0"),
-        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.57.1")
+        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.57.1"),
+        .package(url: "https://github.com/Swinject/Swinject.git", from: "2.9.0"),
+        .package(url: "https://github.com/Moya/Moya.git", .upToNextMajor(from: "15.0.0"))
     ],
     targets: [
         .target(
@@ -29,7 +31,9 @@ let package = Package(
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "Alamofire", package: "Alamofire"),
                 .product(name: "Files", package: "Files"),
-                .product(name: "ZIPFoundation", package: "ZIPFoundation")
+                .product(name: "ZIPFoundation", package: "ZIPFoundation"),
+                .product(name: "Swinject", package: "Swinject"),
+                .product(name: "Moya", package: "Moya")
             ],
             path: "Sources/RunAnywhere",
             swiftSettings: [
