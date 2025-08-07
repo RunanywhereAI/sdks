@@ -2,8 +2,6 @@ import Foundation
 import SwiftUI
 import RunAnywhereSDK
 
-// Note: MessageAnalytics and ConversationAnalytics are defined in ChatViewModel.swift
-
 // MARK: - Conversation Store
 
 @MainActor
@@ -197,10 +195,6 @@ struct Conversation: Identifiable, Codable {
     var modelName: String?
     var frameworkName: String?
 
-    // NEW: Conversation-level analytics
-    var analytics: ConversationAnalytics?
-    var performanceSummary: PerformanceSummary?
-
     var summary: String {
         guard !messages.isEmpty else { return "No messages" }
 
@@ -219,34 +213,6 @@ struct Conversation: Identifiable, Codable {
             .replacingOccurrences(of: "\n", with: " ")
 
         return String(preview.prefix(100))
-    }
-}
-
-// Performance summary for quick access
-struct PerformanceSummary: Codable {
-    let averageResponseTime: TimeInterval
-    let totalTokens: Int
-    let mainModel: String?
-    let completionRate: Double
-    let averageTokensPerSecond: Double
-
-    init(from messages: [Message]) {
-        let analyticsMessages = messages.compactMap { $0.analytics }
-
-        if !analyticsMessages.isEmpty {
-            averageResponseTime = analyticsMessages.compactMap { $0.totalGenerationTime }.reduce(0, +) / Double(analyticsMessages.count)
-            totalTokens = analyticsMessages.reduce(0) { $0 + $1.inputTokens + $1.outputTokens }
-            mainModel = analyticsMessages.first?.modelName
-            let completed = analyticsMessages.filter { $0.completionStatus == .complete }.count
-            completionRate = Double(completed) / Double(analyticsMessages.count)
-            averageTokensPerSecond = analyticsMessages.compactMap { $0.averageTokensPerSecond }.reduce(0, +) / Double(analyticsMessages.count)
-        } else {
-            averageResponseTime = 0
-            totalTokens = 0
-            mainModel = nil
-            completionRate = 0
-            averageTokensPerSecond = 0
-        }
     }
 }
 

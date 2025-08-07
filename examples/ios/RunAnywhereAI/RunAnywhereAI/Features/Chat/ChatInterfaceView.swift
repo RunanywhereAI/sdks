@@ -2,7 +2,7 @@
 //  ChatInterfaceView.swift
 //  RunAnywhereAI
 //
-//  Simplified chat interface
+//  Simplified chat interface that uses SDK analytics
 //
 
 import SwiftUI
@@ -14,7 +14,7 @@ struct ChatInterfaceView: View {
     @StateObject private var conversationStore = ConversationStore.shared
     @State private var showingConversationList = false
     @State private var showingModelSelection = false
-    @State private var showingChatDetails = false
+    @State private var showingAnalytics = false
     @State private var showDebugAlert = false
     @State private var debugMessage = ""
     @FocusState private var isTextFieldFocused: Bool
@@ -48,11 +48,8 @@ struct ChatInterfaceView: View {
                     await handleModelSelected(model)
                 }
             }
-            .sheet(isPresented: $showingChatDetails) {
-                ChatDetailsView(
-                    messages: viewModel.messages,
-                    conversation: viewModel.currentConversation
-                )
+            .sheet(isPresented: $showingAnalytics) {
+                SDKAnalyticsView()
             }
             .onAppear {
                 setupInitialState()
@@ -251,12 +248,11 @@ struct ChatInterfaceView: View {
 
     private var toolbarButtons: some View {
         HStack(spacing: 8) {
-            // Info icon for chat details
-            Button(action: { showingChatDetails = true }) {
-                Image(systemName: "info.circle")
-                    .foregroundColor(viewModel.messages.isEmpty ? .gray : .blue)
+            // Analytics icon
+            Button(action: { showingAnalytics = true }) {
+                Image(systemName: "chart.bar")
+                    .foregroundColor(.blue)
             }
-            .disabled(viewModel.messages.isEmpty)
 
             Button(action: { showingModelSelection = true }) {
                 HStack(spacing: 4) {
@@ -330,11 +326,6 @@ struct ChatInterfaceView: View {
 
     private func sendMessage() {
         logger.info("🎯 sendMessage() called")
-        logger.info("📝 viewModel.canSend: \(viewModel.canSend)")
-        logger.info("📝 viewModel.isModelLoaded: \(viewModel.isModelLoaded)")
-        logger.info("📝 viewModel.currentInput: '\(viewModel.currentInput)'")
-        logger.info("📝 viewModel.isGenerating: \(viewModel.isGenerating)")
-
         guard viewModel.canSend else {
             logger.error("❌ canSend is false, returning")
             return
@@ -368,8 +359,6 @@ struct ChatInterfaceView: View {
         // Just update our view model to reflect the change
         await viewModel.checkModelStatus()
     }
-
-    // MARK: - Scroll Management - Functions inlined to avoid typing issues
 
     // Minimalistic model info bar
     private var modelInfoBar: some View {
@@ -503,7 +492,7 @@ struct TypingIndicatorView: View {
     }
 }
 
-// Enhanced message bubble view with 3D effects and professional styling
+// Simplified message bubble view 
 struct MessageBubbleView: View {
     let message: Message
     let isGenerating: Bool
@@ -520,11 +509,6 @@ struct MessageBubbleView: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
-                // Model badge (only for assistant messages)
-                if message.role == .assistant && message.modelInfo != nil {
-                    modelBadgeSection
-                }
-
                 // Thinking section (only for assistant messages with thinking content)
                 if message.role == .assistant && hasThinking {
                     thinkingSection
@@ -538,8 +522,12 @@ struct MessageBubbleView: View {
                 // Main message content
                 mainMessageBubble
 
-                // Timestamp and analytics summary
-                timestampAndAnalyticsSection
+                // Simple timestamp
+                if !message.content.isEmpty {
+                    Text(message.timestamp, style: .time)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
 
             if message.role != .user {
@@ -563,7 +551,7 @@ struct MessageBubbleView: View {
                         .foregroundColor(.purple)
 
                     // Clean summary text
-                    Text(isThinkingExpanded ? "Hide reasoning" : thinkingSummary)
+                    Text(isThinkingExpanded ? "Hide reasoning" : "Show reasoning")
                         .font(.caption)
                         .foregroundColor(.purple)
                         .lineLimit(1)
@@ -601,24 +589,12 @@ struct MessageBubbleView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.leading)
                     }
-                    .frame(maxHeight: 150) // Shorter max height
+                    .frame(maxHeight: 150)
                     .padding(12)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
                             .fill(Color(.systemGray6))
                     )
-
-                    // Subtle completion status
-                    if isThinkingIncomplete {
-                        HStack {
-                            Spacer()
-                            Text("Reasoning incomplete")
-                                .font(.caption2)
-                                .foregroundColor(.orange.opacity(0.8))
-                                .italic()
-                        }
-                        .padding(.top, 4)
-                    }
                 }
                 .transition(.asymmetric(
                     insertion: .opacity.combined(with: .slide),
@@ -626,53 +602,6 @@ struct MessageBubbleView: View {
                 ))
             }
         }
-    }
-
-    // Check if thinking content appears to be incomplete (doesn't end with punctuation or common ending words)
-    private var isThinkingIncomplete: Bool {
-        guard let thinking = message.thinkingContent?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
-
-        // Don't show incomplete during generation to avoid flickering
-        if isGenerating { return false }
-
-        // Check if thinking content seems to end abruptly
-        let endsWithPunctuation = thinking.hasSuffix(".") || thinking.hasSuffix("!") || thinking.hasSuffix("?") || thinking.hasSuffix(":")
-        let endsWithCommonWords = thinking.lowercased().hasSuffix("response") ||
-                                 thinking.lowercased().hasSuffix("answer") ||
-                                 thinking.lowercased().hasSuffix("message") ||
-                                 thinking.lowercased().hasSuffix("reply") ||
-                                 thinking.lowercased().hasSuffix("helpful") ||
-                                 thinking.lowercased().hasSuffix("appropriate")
-
-        // If content is longer than 100 chars and doesn't end properly, likely incomplete
-        return thinking.count > 100 && !endsWithPunctuation && !endsWithCommonWords
-    }
-
-    // Generate intelligent summary from thinking content
-    private var thinkingSummary: String {
-        guard let thinking = message.thinkingContent?.trimmingCharacters(in: .whitespacesAndNewlines) else { return "" }
-
-        // Extract key concepts from thinking content
-        let sentences = thinking.components(separatedBy: CharacterSet(charactersIn: ".!?")).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-
-        if sentences.count >= 2 {
-            // Take first meaningful sentence as summary
-            let firstSentence = sentences[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            if firstSentence.count > 20 {
-                return firstSentence + "..."
-            }
-        }
-
-        // Fallback to truncated version
-        if thinking.count > 80 {
-            let truncated = String(thinking.prefix(80))
-            if let lastSpace = truncated.lastIndex(of: " ") {
-                return String(truncated[..<lastSpace]) + "..."
-            }
-            return truncated + "..."
-        }
-
-        return thinking
     }
 
     private var thinkingProgressIndicator: some View {
@@ -712,95 +641,6 @@ struct MessageBubbleView: View {
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
 
-    private var modelBadgeSection: some View {
-        HStack {
-            if message.role == .assistant {
-                Spacer()
-            }
-
-            HStack(spacing: 6) {
-                // Model icon
-                Image(systemName: "cube")
-                    .font(.caption2)
-                    .foregroundColor(.white)
-
-                // Model name
-                Text(message.modelInfo?.modelName ?? "Unknown")
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundColor(.white)
-
-                // Framework badge
-                Text(message.modelInfo?.framework ?? "")
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.8))
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(LinearGradient(colors: [Color.blue, Color.blue.opacity(0.8)],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .shadow(color: .blue.opacity(0.3), radius: 2, x: 0, y: 1)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color.white.opacity(0.2), lineWidth: 0.5)
-                    )
-            )
-
-            if message.role == .user {
-                Spacer()
-            }
-        }
-    }
-
-    private var timestampAndAnalyticsSection: some View {
-        HStack(spacing: 8) {
-            if message.role == .assistant {
-                Spacer()
-            }
-
-            // Timestamp
-            Text(message.timestamp, style: .time)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-
-            // Analytics summary (if available)
-            if let analytics = message.analytics {
-                Group {
-                    Text("•")
-                        .foregroundColor(.secondary.opacity(0.5))
-
-                    // Response time
-                    Text("\(String(format: "%.1f", analytics.totalGenerationTime))s")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-
-                    // Tokens per second (if meaningful)
-                    if analytics.averageTokensPerSecond > 0 {
-                        Text("•")
-                            .foregroundColor(.secondary.opacity(0.5))
-
-                        Text("\(Int(analytics.averageTokensPerSecond)) tok/s")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-
-                    // Thinking mode indicator
-                    if analytics.wasThinkingMode {
-                        Image(systemName: "lightbulb.min")
-                            .font(.caption2)
-                            .foregroundColor(.purple.opacity(0.7))
-                    }
-                }
-            }
-
-            if message.role == .user {
-                Spacer()
-            }
-        }
-    }
-
     @ViewBuilder
     private var mainMessageBubble: some View {
         // Only show message bubble if there's content
@@ -834,428 +674,40 @@ struct MessageBubbleView: View {
     }
 }
 
-// MARK: - Chat Details View
+// MARK: - SDK Analytics View Wrapper
 
-struct ChatDetailsView: View {
-    let messages: [Message]
-    let conversation: Conversation?
+struct SDKAnalyticsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedTab = 0
 
     var body: some View {
         NavigationView {
-            TabView(selection: $selectedTab) {
-                // Overview Tab
-                ChatOverviewTab(messages: messages, conversation: conversation)
-                    .tabItem {
-                        Label("Overview", systemImage: "chart.bar")
-                    }
-                    .tag(0)
-
-                // Message Analytics Tab
-                MessageAnalyticsTab(messages: messages)
-                    .tabItem {
-                        Label("Messages", systemImage: "message")
-                    }
-                    .tag(1)
-
-                // Performance Tab
-                PerformanceTab(messages: messages)
-                    .tabItem {
-                        Label("Performance", systemImage: "speedometer")
-                    }
-                    .tag(2)
-            }
-            .navigationTitle("Chat Analytics")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Overview Tab
-
-struct ChatOverviewTab: View {
-    let messages: [Message]
-    let conversation: Conversation?
-
-    private var analyticsMessages: [MessageAnalytics] {
-        messages.compactMap { $0.analytics }
-    }
-
-    private var conversationSummary: String {
-        let messageCount = messages.count
-        let userMessages = messages.filter { $0.role == .user }.count
-        let assistantMessages = messages.filter { $0.role == .assistant }.count
-        return "\(messageCount) messages • \(userMessages) from you, \(assistantMessages) from AI"
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Conversation Summary Card
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Conversation Summary")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: "message.circle")
-                                .foregroundColor(.blue)
-                            Text(conversationSummary)
-                                .font(.subheadline)
-                        }
-
-                        if let conversation = conversation {
-                            HStack {
-                                Image(systemName: "clock")
-                                    .foregroundColor(.blue)
-                                Text("Created \(conversation.createdAt, style: .relative)")
-                                    .font(.subheadline)
-                            }
-                        }
-
-                        if !analyticsMessages.isEmpty {
-                            HStack {
-                                Image(systemName: "cube")
-                                    .foregroundColor(.blue)
-                                let models = Set(analyticsMessages.map { $0.modelName })
-                                Text("\(models.count) model\(models.count == 1 ? "" : "s") used")
-                                    .font(.subheadline)
+            if #available(iOS 14.0, *) {
+                RunAnywhereSDK.shared.createAnalyticsView()
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                dismiss()
                             }
                         }
                     }
+            } else {
+                VStack {
+                    Text("Analytics")
+                        .font(.title)
+                    
+                    Text("Analytics view requires iOS 14.0 or later")
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
                 }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
-                )
-
-                // Performance Highlights
-                if !analyticsMessages.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Performance Highlights")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 12) {
-                            PerformanceCard(
-                                title: "Avg Response Time",
-                                value: String(format: "%.1fs", averageResponseTime),
-                                icon: "timer",
-                                color: .green
-                            )
-
-                            PerformanceCard(
-                                title: "Avg Speed",
-                                value: "\(Int(averageTokensPerSecond)) tok/s",
-                                icon: "speedometer",
-                                color: .blue
-                            )
-
-                            PerformanceCard(
-                                title: "Total Tokens",
-                                value: "\(totalTokens)",
-                                icon: "textformat.123",
-                                color: .purple
-                            )
-
-                            PerformanceCard(
-                                title: "Success Rate",
-                                value: "\(Int(completionRate * 100))%",
-                                icon: "checkmark.circle",
-                                color: .orange
-                            )
-                        }
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray6))
-                    )
-                }
-
-                Spacer()
-            }
-            .padding()
-        }
-    }
-
-    private var averageResponseTime: Double {
-        guard !analyticsMessages.isEmpty else { return 0 }
-        return analyticsMessages.map { $0.totalGenerationTime }.reduce(0, +) / Double(analyticsMessages.count)
-    }
-
-    private var averageTokensPerSecond: Double {
-        guard !analyticsMessages.isEmpty else { return 0 }
-        return analyticsMessages.map { $0.averageTokensPerSecond }.reduce(0, +) / Double(analyticsMessages.count)
-    }
-
-    private var totalTokens: Int {
-        return analyticsMessages.reduce(0) { $0 + $1.inputTokens + $1.outputTokens }
-    }
-
-    private var completionRate: Double {
-        guard !analyticsMessages.isEmpty else { return 0 }
-        let completed = analyticsMessages.filter { $0.completionStatus == .complete }.count
-        return Double(completed) / Double(analyticsMessages.count)
-    }
-}
-
-// MARK: - Performance Card
-
-struct PerformanceCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                Spacer()
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(value)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(color.opacity(0.1))
-                .strokeBorder(color.opacity(0.3), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Message Analytics Tab
-
-struct MessageAnalyticsTab: View {
-    let messages: [Message]
-
-    private var analyticsMessages: [(Message, MessageAnalytics)] {
-        messages.compactMap { message in
-            if let analytics = message.analytics {
-                return (message, analytics)
-            }
-            return nil
-        }
-    }
-
-    var body: some View {
-        List {
-            ForEach(Array(analyticsMessages.enumerated()), id: \.1.0.id) { index, messageWithAnalytics in
-                let (message, analytics) = messageWithAnalytics
-                MessageAnalyticsRow(
-                    messageNumber: index + 1,
-                    message: message,
-                    analytics: analytics
-                )
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Message Analytics Row
-
-struct MessageAnalyticsRow: View {
-    let messageNumber: Int
-    let message: Message
-    let analytics: MessageAnalytics
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header
-            HStack {
-                Text("Message #\(messageNumber)")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-
-                Spacer()
-
-                Text(analytics.modelName)
-                    .font(.caption)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(4)
-
-                Text(analytics.framework)
-                    .font(.caption)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.purple.opacity(0.1))
-                    .cornerRadius(4)
-            }
-
-            // Performance Metrics
-            HStack(spacing: 16) {
-                MetricView(
-                    label: "Time",
-                    value: String(format: "%.1fs", analytics.totalGenerationTime),
-                    color: .green
-                )
-
-                if let ttft = analytics.timeToFirstToken {
-                    MetricView(
-                        label: "TTFT",
-                        value: String(format: "%.1fs", ttft),
-                        color: .blue
-                    )
-                }
-
-                MetricView(
-                    label: "Speed",
-                    value: "\(Int(analytics.averageTokensPerSecond)) tok/s",
-                    color: .purple
-                )
-
-                if analytics.wasThinkingMode {
-                    Image(systemName: "lightbulb.min")
-                        .foregroundColor(.orange)
-                        .font(.caption)
-                }
-            }
-
-            // Content Preview
-            Text(message.content.prefix(100))
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Metric View
-
-struct MetricView: View {
-    let label: String
-    let value: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(color)
-
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
-// MARK: - Performance Tab
-
-struct PerformanceTab: View {
-    let messages: [Message]
-
-    private var analyticsMessages: [MessageAnalytics] {
-        messages.compactMap { $0.analytics }
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                if !analyticsMessages.isEmpty {
-                    // Models Used
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Models Used")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-
-                        let modelGroups = Dictionary(grouping: analyticsMessages) { $0.modelName }
-
-                        ForEach(modelGroups.keys.sorted(), id: \.self) { modelName in
-                            let modelMessages = modelGroups[modelName]!
-                            let avgSpeed = modelMessages.map { $0.averageTokensPerSecond }.reduce(0, +) / Double(modelMessages.count)
-                            let avgTime = modelMessages.map { $0.totalGenerationTime }.reduce(0, +) / Double(modelMessages.count)
-
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(modelName)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-
-                                    Text("\(modelMessages.count) message\(modelMessages.count == 1 ? "" : "s")")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Spacer()
-
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    Text(String(format: "%.1fs avg", avgTime))
-                                        .font(.caption)
-                                        .foregroundColor(.green)
-
-                                    Text("\(Int(avgSpeed)) tok/s")
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color(.systemGray6))
-                            )
-                        }
-                    }
-
-                    // Thinking Mode Analysis
-                    if analyticsMessages.contains(where: { $0.wasThinkingMode }) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Thinking Mode Analysis")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-
-                            let thinkingMessages = analyticsMessages.filter { $0.wasThinkingMode }
-                            let thinkingPercentage = Double(thinkingMessages.count) / Double(analyticsMessages.count) * 100
-
-                            HStack {
-                                Image(systemName: "lightbulb.min")
-                                    .foregroundColor(.purple)
-
-                                Text("Used in \(thinkingMessages.count) messages (\(String(format: "%.0f", thinkingPercentage))%)")
-                                    .font(.subheadline)
-                            }
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.purple.opacity(0.1))
-                            )
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            dismiss()
                         }
                     }
                 }
-
-                Spacer()
             }
-            .padding()
         }
     }
 }
