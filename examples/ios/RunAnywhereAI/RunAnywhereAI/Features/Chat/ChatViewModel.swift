@@ -177,7 +177,14 @@ class ChatViewModel: ObservableObject {
     private let logger = Logger(subsystem: "com.runanywhere.RunAnywhereAI", category: "ChatViewModel")
 
     var canSend: Bool {
-        !currentInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isGenerating && isModelLoaded
+        let inputOk = !currentInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let result = inputOk && !isGenerating && isModelLoaded
+        
+        if !result {
+            logger.info("🎯 canSend=false: inputOk=\(inputOk), isGenerating=\(self.isGenerating), isModelLoaded=\(self.isModelLoaded)")
+        }
+        
+        return result
     }
 
     init() {
@@ -270,7 +277,7 @@ class ChatViewModel: ObservableObject {
                     // Get the model from ModelListViewModel
                     if let model = ModelListViewModel.shared.currentModel {
                         do {
-                            // This will reload the model if it's not already loaded
+                            // This will reload the model if it's not already loaded (including Foundation Models)
                             _ = try await sdk.loadModel(model.id)
                             logger.info("✅ Ensured model '\(model.name)' is loaded in SDK")
                         } catch {
@@ -683,31 +690,45 @@ class ChatViewModel: ObservableObject {
         // Check if a model is currently loaded in the SDK
         // Since we can't directly access SDK's current model, we'll check via ModelListViewModel
         let modelListViewModel = ModelListViewModel.shared
+        
+        logger.info("🎯 DEBUG: Starting checkModelStatus")
+        
+        // Add a small delay to ensure ModelListViewModel has time to auto-select Foundation Models
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
 
         await MainActor.run {
+            logger.info("🎯 DEBUG: ModelListViewModel.shared.currentModel = \(modelListViewModel.currentModel?.name ?? "nil")")
+            
             if let currentModel = modelListViewModel.currentModel {
                 self.isModelLoaded = true
                 self.loadedModelName = currentModel.name
+                logger.info("✅ Model status check: Model '\(currentModel.name)' is available")
+                logger.info("🎯 DEBUG: Set isModelLoaded = true, loadedModelName = \(currentModel.name)")
 
                 // Ensure the model is actually loaded in the SDK
                 Task {
                     do {
+                        // Verify model is loaded in SDK (including Foundation Models)
                         _ = try await sdk.loadModel(currentModel.id)
                         logger.info("Verified model '\(currentModel.name)' is loaded in SDK")
-
                     } catch {
                         logger.error("Failed to verify model is loaded: \(error)")
                         await MainActor.run {
                             self.isModelLoaded = false
                             self.loadedModelName = nil
+                            logger.info("🎯 DEBUG: Reset isModelLoaded = false due to SDK load error")
                         }
                     }
                 }
             } else {
+                logger.info("❌ Model status check: No model currently selected")
+                logger.info("🎯 DEBUG: Set isModelLoaded = false, loadedModelName = nil")
                 self.isModelLoaded = false
                 self.loadedModelName = nil
 
             }
+
+            logger.info("🎯 DEBUG: Final state - isModelLoaded: \(self.isModelLoaded), loadedModelName: \(self.loadedModelName ?? "nil")")
 
             // Update system message
             if self.messages.first?.role == .system {

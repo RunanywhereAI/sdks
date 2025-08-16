@@ -74,7 +74,7 @@ struct ChatInterfaceView: View {
         ScrollViewReader { proxy in
             VStack(spacing: 0) {
                 // Minimalistic model info bar at top
-                if viewModel.isModelLoaded, let modelName = viewModel.loadedModelName {
+                if viewModel.isModelLoaded, let _ = viewModel.loadedModelName {
                     modelInfoBar
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -302,6 +302,27 @@ struct ChatInterfaceView: View {
                 .background(Color.blue.opacity(0.1))
 
                 Divider()
+            } else {
+                // Debug info when model is loaded
+                VStack(spacing: 4) {
+                    Text("DEBUG: Model loaded: \(viewModel.loadedModelName ?? "unknown")")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    Text("DEBUG: Can send: \(viewModel.canSend ? "YES" : "NO")")
+                        .font(.caption)
+                        .foregroundColor(viewModel.canSend ? .green : .red)
+                    Text("DEBUG: Is generating: \(viewModel.isGenerating ? "YES" : "NO")")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    Text("DEBUG: Input: '\(viewModel.currentInput)'")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.gray.opacity(0.1))
+                
+                Divider()
             }
 
             HStack(spacing: 12) {
@@ -312,8 +333,14 @@ struct ChatInterfaceView: View {
                     .onSubmit {
                         sendMessage()
                     }
-                    .disabled(!viewModel.isModelLoaded)
+                    .disabled(!viewModel.isModelLoaded || viewModel.isGenerating)
                     .submitLabel(.send)
+                    .onChange(of: viewModel.isModelLoaded) { _, isLoaded in
+                        logger.info("🎯 Model loaded state changed: \(isLoaded)")
+                    }
+                    .onChange(of: viewModel.canSend) { _, canSend in
+                        logger.info("🎯 Can send changed: \(canSend)")
+                    }
 
                 Button(action: sendMessage) {
                     Image(systemName: "arrow.up.circle.fill")

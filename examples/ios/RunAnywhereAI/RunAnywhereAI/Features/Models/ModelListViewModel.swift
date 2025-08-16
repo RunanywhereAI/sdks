@@ -22,6 +22,21 @@ class ModelListViewModel: ObservableObject {
 
     // MARK: - Predefined Models
     private let predefinedModels: [ModelInfo] = [
+        // Apple Foundation Models (Built-in, no download required)
+        ModelInfo(
+            id: "apple-foundation-base",
+            name: "Apple Foundation Model",
+            format: .mlmodel,
+            downloadURL: nil, // Built-in model
+            localPath: URL(fileURLWithPath: "/System/Library/PrivateFrameworks/"), // System framework
+            estimatedMemory: 500_000_000, // 500MB estimate
+            contextLength: 4096,
+            downloadSize: 0, // No download needed
+            compatibleFrameworks: [.foundationModels],
+            preferredFramework: .foundationModels,
+            supportsThinking: false
+        ),
+        
         // Llama-3.2 1B Q6_K
         ModelInfo(
             id: "llama-3.2-1b-instruct-q6-k",
@@ -108,12 +123,16 @@ class ModelListViewModel: ObservableObject {
     ]
 
     init() {
+        print("🎯 DEBUG: ModelListViewModel.init() called")
         Task {
+            print("🎯 DEBUG: Starting loadModels() task")
             await loadModels()
+            print("🎯 DEBUG: loadModels() task completed")
         }
     }
 
     func loadModels() async {
+        print("🎯 DEBUG: loadModels() started")
         isLoading = true
         errorMessage = nil
 
@@ -122,51 +141,126 @@ class ModelListViewModel: ObservableObject {
 
         // Start with predefined models
         var allModels = predefinedModels
+        print("🎯 DEBUG: Starting with \(allModels.count) predefined models")
+        for model in predefinedModels {
+            print("🎯 DEBUG: Predefined model: \(model.name), frameworks: \(model.compatibleFrameworks), downloadURL: \(model.downloadURL?.absoluteString ?? "nil")")
+        }
 
         do {
             // Add any existing SDK models
             let sdkModels = try await sdk.listAvailableModels()
+            print("🎯 DEBUG: SDK returned \(sdkModels.count) models")
+            
+            for sdkModel in sdkModels {
+                print("🎯 DEBUG: SDK model: \(sdkModel.name), frameworks: \(sdkModel.compatibleFrameworks)")
+            }
 
             // Avoid duplicates by checking if model already exists in predefined list
             for sdkModel in sdkModels {
                 if !allModels.contains(where: { $0.id == sdkModel.id }) {
                     allModels.append(sdkModel)
+                    print("🎯 DEBUG: Added SDK model to allModels: \(sdkModel.name)")
+                } else {
+                    print("🎯 DEBUG: Skipped duplicate SDK model: \(sdkModel.name)")
                 }
             }
         } catch {
-            print("Failed to load models from SDK: \(error)")
+            print("❌ Failed to load models from SDK: \(error)")
             // Still proceed with predefined models even if SDK fails
         }
 
         availableModels = allModels
-        currentModel = nil
+        
+        print("🎯 DEBUG: Looking for Foundation Models in \(allModels.count) total models")
+        for model in allModels {
+            print("🎯 DEBUG: Model: \(model.name), frameworks: \(model.compatibleFrameworks)")
+        }
+        
+        // Auto-select best available model
+        // Try Foundation Models first (only on real devices)
+        #if targetEnvironment(simulator)
+        print("🎯 DEBUG: Running in simulator - Foundation Models not available, selecting alternative")
+        let foundationModel: ModelInfo? = nil
+        #else
+        let foundationModel = allModels.first(where: { $0.compatibleFrameworks.contains(.foundationModels) })
+        if foundationModel != nil {
+            print("🎯 DEBUG: Found Foundation Model on real device: \(foundationModel!.name)")
+        }
+        #endif
+        
+        if let foundationModel = foundationModel {
+            print("🎯 DEBUG: Selecting Foundation Model: \(foundationModel.name)")
+            currentModel = foundationModel
+            // Foundation Models don't need downloading - they're built-in
+            // Just load them directly in the SDK
+            Task {
+                do {
+                    print("🎯 DEBUG: Loading Foundation Model in SDK...")
+                    
+                    // For Foundation Models, we still need to load them through SDK
+                    // even though they're built-in - the SDK needs to initialize them
+                    print("🎯 DEBUG: About to load Foundation Model '\(foundationModel.name)' with ID '\(foundationModel.id)'")
+                    print("🎯 DEBUG: Foundation Model format: \(foundationModel.format)")
+                    print("🎯 DEBUG: Foundation Model frameworks: \(foundationModel.compatibleFrameworks)")
+                    
+                    try await sdk.loadModel(foundationModel.id)
+                    print("🎯 DEBUG: Foundation Model loaded successfully in SDK!")
+                    // Post notification that model was loaded
+                    await MainActor.run {
+                        NotificationCenter.default.post(name: Notification.Name("ModelLoaded"), object: foundationModel)
+                        print("🎯 DEBUG: Posted ModelLoaded notification for Foundation Model")
+                    }
+                } catch {
+                    print("❌ Failed to load Foundation Model: \(error)")
+                    await MainActor.run {
+                        self.currentModel = nil
+                    }
+                }
+            }
+        } else {
+            print("❌ DEBUG: No Foundation Model found - trying alternative models")
+            // Fallback to any available model
+            if let alternativeModel = allModels.first {
+                print("🎯 DEBUG: Selecting alternative model: \(alternativeModel.name)")
+                currentModel = alternativeModel
+            } else {
+                print("❌ DEBUG: No models available at all")
+                currentModel = nil
+            }
+        }
+        
         isLoading = false
     }
 
     private func registerPredefinedModels() async {
         for model in predefinedModels {
-            guard let downloadURL = model.downloadURL else { continue }
-
             do {
                 // Check if model is already registered by trying to get it
                 let existingModels = try await sdk.listAvailableModels()
                 let alreadyRegistered = existingModels.contains { $0.id == model.id }
 
                 if !alreadyRegistered {
-                    // Register the model with SDK
-                    let _ = sdk.addModelFromURL(
-                        name: model.name,
-                        url: downloadURL,
-                        framework: model.preferredFramework ?? .llamaCpp,
-                        estimatedSize: model.downloadSize,
-                        supportsThinking: model.supportsThinking
-                    )
-                    print("Registered predefined model: \(model.name)")
+                    if let downloadURL = model.downloadURL {
+                        // Register downloadable model with SDK
+                        let _ = sdk.addModelFromURL(
+                            name: model.name,
+                            url: downloadURL,
+                            framework: model.preferredFramework ?? .llamaCpp,
+                            estimatedSize: model.downloadSize,
+                            supportsThinking: model.supportsThinking
+                        )
+                        print("🎯 DEBUG: Registered downloadable model: \(model.name)")
+                    } else if model.compatibleFrameworks.contains(.foundationModels) {
+                        // For Foundation Models, register them as local models without download URL
+                        print("🎯 DEBUG: Registering Foundation Model as local model: \(model.name)")
+                        // We'll try to register it as a local model
+                        // This might require a different SDK method for built-in models
+                    }
                 } else {
-                    print("Model \(model.name) already registered, skipping")
+                    print("🎯 DEBUG: Model \(model.name) already registered, skipping")
                 }
             } catch {
-                print("Failed to register predefined model \(model.name): \(error)")
+                print("❌ Failed to register predefined model \(model.name): \(error)")
                 // Continue with other models even if one fails
             }
         }

@@ -61,7 +61,18 @@ struct RunAnywhereAIApp: App {
 
             // Register framework adapters before initializing SDK
             RunAnywhereSDK.shared.registerFrameworkAdapter(LLMSwiftAdapter())
-            RunAnywhereSDK.shared.registerFrameworkAdapter(FoundationModelsAdapter())
+            
+            #if canImport(FoundationModels)
+            if #available(iOS 18.2, macOS 15.2, *) {
+                print("🎯 DEBUG: Registering FoundationModelsAdapter...")
+                RunAnywhereSDK.shared.registerFrameworkAdapter(FoundationModelsAdapter())
+                print("🎯 DEBUG: FoundationModelsAdapter registered!")
+            } else {
+                print("🎯 DEBUG: iOS version too old for FoundationModels")
+            }
+            #else
+            print("🎯 DEBUG: FoundationModels framework not available at compile time")
+            #endif
 
             // Initialize the SDK
             let startTime = Date()
