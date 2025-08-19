@@ -56,6 +56,15 @@
       }
     },
     {
+      "identity" : "llm.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/eastriverlee/LLM.swift/",
+      "state" : {
+        "branch" : "main",
+        "revision" : "4c4e909ac4758c628c9cd263a0c25b6edff5526d"
+      }
+    },
+    {
       "identity" : "pulse",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/kean/Pulse",
