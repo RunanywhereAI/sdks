@@ -7,9 +7,25 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![iOS SDK](https://img.shields.io/badge/iOS%20SDK-Available-brightgreen.svg)](sdk/runanywhere-swift/)
 [![Android SDK](https://img.shields.io/badge/Android%20SDK-Coming%20Soon-yellow.svg)](sdk/runanywhere-android/)
+[![TestFlight Beta](https://img.shields.io/badge/TestFlight_Beta-Available-blue)](https://testflight.apple.com/join/xc4HVVJE)
 [![GitHub stars](https://img.shields.io/github/stars/RunanywhereAI/runanywhere-sdks?style=social)](https://github.com/RunanywhereAI/runanywhere-sdks)
 
-**Privacy-first, on-device AI SDKs** that bring powerful language models directly to your iOS and Android applications. RunAnywhere enables intelligent AI execution with automatic optimization for performance, privacy, and user experience.
+**Transform every device into an AI powerhouse.** RunAnywhere brings state-of-the-art language models directly to your devices - no cloud, no subscriptions, no data leaving your control.
+
+<div align="center">
+
+### 🧠 The GPU in Your Pocket is More Powerful Than You Think
+
+**Your smartphone has more compute power than a 2010 supercomputer.**  
+**It's time to use it.**
+
+<a href="https://testflight.apple.com/join/xc4HVVJE">
+  <img src="https://img.shields.io/badge/⚡_Experience_On--Device_AI-iOS_Beta_Available-blue?style=for-the-badge&logo=apple&logoColor=white" alt="Try on TestFlight" />
+</a>
+
+**Zero Cloud Costs** • **100% Private** • **Works Offline**
+
+</div>
 
 ## 💰 Why RunAnywhere?
 
@@ -37,19 +53,21 @@ The iOS SDK provides on-device text generation, voice AI capabilities, and struc
 ### 🏗️ Android SDK - **Coming Soon**
 The Android SDK is under active development. We're bringing the same powerful on-device AI capabilities to Android.
 
-## 🎯 See It In Action
+## 🎬 See It In Action
 
 <p align="center">
   <a href="https://www.youtube.com/watch?v=GG100ijJHl4">
-    <img src="https://img.shields.io/badge/▶️_Watch_Demo-red?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo" />
-  </a>
-  <a href="https://testflight.apple.com/join/xc4HVVJE">
-    <img src="https://img.shields.io/badge/📱_Try_iOS_App-blue?style=for-the-badge&logo=apple&logoColor=white" alt="Try on TestFlight" />
+    <img src="https://img.shields.io/badge/▶️_Watch_2_Min_Demo-red?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo" />
   </a>
   <a href="https://runanywhere.ai">
-    <img src="https://img.shields.io/badge/🌐_Visit_Website-green?style=for-the-badge" alt="Visit Website" />
+    <img src="https://img.shields.io/badge/🌐_Learn_More-green?style=for-the-badge" alt="Visit Website" />
+  </a>
+  <a href="https://discord.gg/pxRkYmWh">
+    <img src="https://img.shields.io/badge/💬_Join_Community-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord" />
   </a>
 </p>
+
+### 📱 App Screenshots
 
 <p align="center">
   <img src="docs/screenshots/main-screenshot.jpg" alt="Chat with RunAnywhere" width="200"/>
@@ -57,6 +75,41 @@ The Android SDK is under active development. We're bringing the same powerful on
   <img src="examples/ios/RunAnywhereAI/docs/screenshots/quiz-flow.png" alt="Structured Output" width="200"/>
   <img src="examples/ios/RunAnywhereAI/docs/screenshots/voice-ai.png" alt="Voice AI" width="200"/>
 </p>
+
+### 🚀 The Revolution: Every Device Becomes an AI Powerhouse
+
+#### 💡 Our Vision: Democratize AI - Make Every GPU Count
+**There are 8 billion smartphones on Earth with combined compute power exceeding all cloud data centers.** RunAnywhere unlocks this untapped potential.
+
+<p align="center">
+  <a href="https://testflight.apple.com/join/xc4HVVJE">
+    <img src="https://img.shields.io/badge/⚡_Join_the_Revolution-Start_with_iOS_Beta-blue?style=for-the-badge&logo=apple&logoColor=white" alt="Join TestFlight Beta" />
+  </a>
+</p>
+
+**🌍 The Future We're Building:**
+- **Your Phone**: 35+ TFLOPS of AI compute in your pocket
+- **Your Laptop**: 100+ TFLOPS sitting idle 90% of the time
+- **Your Watch**: Running AI models by 2025
+- **Your Car**: Processing AI without cloud dependency
+- **Your Home**: Every smart device contributing to AI tasks
+
+**📱 Start Today (iOS Beta Available Now):**
+
+**✅ Available for:**
+- iPhone (iOS 13+)
+- iPad (iPadOS 13+)  
+- Mac (macOS 10.15+ via Mac Catalyst)
+
+**What's included in the beta:**
+- 💬 Full chat interface with multiple AI models
+- 🎙️ Voice conversations with real-time transcription
+- 📊 Structured output generation (quiz, JSON, etc.)
+- ⚡ Performance analytics and cost tracking
+- 🔒 100% on-device processing
+
+#### App Store (Coming Soon)
+We're preparing for App Store launch. [Get notified →](https://runanywhere.ai)
 
 ## 📦 What's Included
 
@@ -101,7 +154,10 @@ The Android SDK is under active development. We're bringing the same powerful on
 
 ## 🚀 Quick Start
 
-### iOS SDK (Available Now)
+### For Users - Try the App
+The fastest way to experience RunAnywhere is through our TestFlight beta. [Join here →](https://testflight.apple.com/join/xc4HVVJE)
+
+### For Developers - iOS SDK
 
 ```swift
 import RunAnywhere
