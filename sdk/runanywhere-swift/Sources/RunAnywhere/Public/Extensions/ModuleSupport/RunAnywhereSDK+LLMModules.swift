@@ -37,24 +37,26 @@ extension RunAnywhereSDK {
     private func createLLMSwiftService() -> (any LLMService)? {
         let className = "LLMSwiftModule.LLMSwiftService"
 
-        guard let llmClass = NSClassFromString(className) as? any LLMService.Type else {
+        guard let llmClass = NSClassFromString(className) as? NSObject.Type else {
             print("[RunAnywhereSDK] LLMSwift module not found. Add it to your app dependencies.")
             return nil
         }
 
-        return llmClass.init()
+        // Note: Module needs to conform to LLMService protocol
+        return llmClass.init() as? LLMService
     }
 
     /// Create MLX service if module is available
     private func createMLXService() -> (any LLMService)? {
         let className = "MLXModule.MLXLLMService"
 
-        guard let mlxClass = NSClassFromString(className) as? any LLMService.Type else {
+        guard let mlxClass = NSClassFromString(className) as? NSObject.Type else {
             print("[RunAnywhereSDK] MLX module not found. Add it to your app dependencies.")
             return nil
         }
 
-        return mlxClass.init()
+        // Note: Module needs to conform to LLMService protocol
+        return mlxClass.init() as? LLMService
     }
 
     // MARK: - Module Availability
@@ -101,17 +103,7 @@ public struct LLMModuleFactory {
     }
 }
 
-// MARK: - LLM Service Protocol
-
-/// Protocol that LLM modules must conform to
-public protocol LLMService {
-    init()
-    func initialize() async throws
-    func loadModel(_ modelPath: URL) async throws
-    func generate(prompt: String, options: GenerationOptions?) async throws -> String
-    func generateStream(prompt: String, options: GenerationOptions?) -> AsyncThrowingStream<String, Error>
-    func unloadModel() async
-}
+// Note: LLMService protocol is defined in Core/Protocols/Services/LLMService.swift
 
 // MARK: - LLM Module Configuration
 

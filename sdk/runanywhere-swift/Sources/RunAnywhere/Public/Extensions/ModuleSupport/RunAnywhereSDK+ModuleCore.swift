@@ -28,8 +28,8 @@ extension RunAnywhereSDK {
     /// - Parameter moduleId: Unique identifier for the module
     /// - Returns: URL to the module's cache directory
     public func createModuleCache(moduleId: String) throws -> URL {
-        let documentsFolder = try serviceContainer.fileManager.getDocumentsFolder()
-        let cacheFolder = try documentsFolder.createSubfolderIfNeeded(withName: "Cache")
+        let baseFolder = serviceContainer.fileManager.getBaseFolder()
+        let cacheFolder = try baseFolder.createSubfolderIfNeeded(withName: "Cache")
         let moduleFolder = try cacheFolder.createSubfolderIfNeeded(withName: moduleId)
         return moduleFolder.url
     }
@@ -37,8 +37,8 @@ extension RunAnywhereSDK {
     /// Clear cache for a specific module
     /// - Parameter moduleId: Unique identifier for the module
     public func clearModuleCache(moduleId: String) throws {
-        let documentsFolder = try serviceContainer.fileManager.getDocumentsFolder()
-        if let cacheFolder = try? documentsFolder.subfolder(named: "Cache"),
+        let baseFolder = serviceContainer.fileManager.getBaseFolder()
+        if let cacheFolder = try? baseFolder.subfolder(named: "Cache"),
            let moduleFolder = try? cacheFolder.subfolder(named: moduleId) {
             try moduleFolder.delete()
         }
@@ -115,28 +115,31 @@ public protocol ModuleFileManagementProtocol {
 
 extension SimplifiedFileManager: ModuleFileManagementProtocol {
     public func getFrameworkFolder(_ framework: String) throws -> URL {
-        // Reuse existing getFrameworkFolder which returns URL directly
-        return try getFrameworkFolder(framework)
+        // Use the base folder to create framework-specific directories
+        let baseFolder = getBaseFolder()
+        let modelsFolder = try baseFolder.createSubfolderIfNeeded(withName: "Models")
+        let frameworkFolder = try modelsFolder.createSubfolderIfNeeded(withName: framework)
+        return frameworkFolder.url
     }
 
     public func getModuleCacheFolder(_ moduleId: String) throws -> URL {
-        let documentsFolder = try getDocumentsFolder()
-        let cacheFolder = try documentsFolder.createSubfolderIfNeeded(withName: "Cache")
+        let baseFolder = getBaseFolder()
+        let cacheFolder = try baseFolder.createSubfolderIfNeeded(withName: "Cache")
         let moduleFolder = try cacheFolder.createSubfolderIfNeeded(withName: moduleId)
         return moduleFolder.url
     }
 
     public func clearModuleCache(_ moduleId: String) throws {
-        let documentsFolder = try getDocumentsFolder()
-        if let cacheFolder = try? documentsFolder.subfolder(named: "Cache"),
+        let baseFolder = getBaseFolder()
+        if let cacheFolder = try? baseFolder.subfolder(named: "Cache"),
            let moduleFolder = try? cacheFolder.subfolder(named: moduleId) {
             try moduleFolder.delete()
         }
     }
 
     public func getModuleTempDirectory(_ moduleId: String) throws -> URL {
-        let documentsFolder = try getDocumentsFolder()
-        let tempFolder = try documentsFolder.createSubfolderIfNeeded(withName: "Temp")
+        let baseFolder = getBaseFolder()
+        let tempFolder = try baseFolder.createSubfolderIfNeeded(withName: "Temp")
         let moduleFolder = try tempFolder.createSubfolderIfNeeded(withName: moduleId)
         return moduleFolder.url
     }

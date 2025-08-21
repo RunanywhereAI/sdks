@@ -81,12 +81,14 @@ public struct ModuleIntegrationHelper {
     /// - Returns: Array of models for the framework
     public func getModelsForFramework(_ framework: String) async throws -> [ModelInfo] {
         let allModels = try await sdk.listAvailableModels()
-        return allModels.filter { model in
-            if case .custom(let fw) = model.framework {
-                return fw == framework
+        // Use explicit filter to avoid Predicate type confusion
+        var filteredModels: [ModelInfo] = []
+        for model in allModels {
+            if case .custom(let fw) = model.framework, fw == framework {
+                filteredModels.append(model)
             }
-            return false
         }
+        return filteredModels
     }
 }
 
