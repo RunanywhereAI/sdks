@@ -27,7 +27,12 @@ let package = Package(
                 "SherpaONNXFramework",
                 "ONNXRuntimeFramework"
             ],
-            path: "Sources/SherpaONNXTTS"
+            path: "Sources/SherpaONNXTTS",
+            publicHeadersPath: "Internal/Bridge",
+            cxxSettings: [
+                .headerSearchPath("Internal/Bridge"),
+                .define("SHERPA_ONNX_AVAILABLE", .when(platforms: [.iOS, .macOS]))
+            ]
         ),
         // Binary targets for XCFrameworks
         .binaryTarget(
