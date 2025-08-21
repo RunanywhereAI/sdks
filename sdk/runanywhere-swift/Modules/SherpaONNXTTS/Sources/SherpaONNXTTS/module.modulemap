@@ -1,0 +1,4 @@
+module SherpaONNXTTSBridge {
+    header "Internal/Bridge/SherpaONNXBridge.h"
+    export *
+}

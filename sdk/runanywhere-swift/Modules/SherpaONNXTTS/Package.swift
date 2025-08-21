@@ -23,9 +23,20 @@ let package = Package(
         .target(
             name: "SherpaONNXTTS",
             dependencies: [
-                .product(name: "RunAnywhereSDK", package: "runanywhere-swift")
+                .product(name: "RunAnywhereSDK", package: "runanywhere-swift"),
+                "SherpaONNXFramework",
+                "ONNXRuntimeFramework"
             ],
             path: "Sources/SherpaONNXTTS"
+        ),
+        // Binary targets for XCFrameworks
+        .binaryTarget(
+            name: "SherpaONNXFramework",
+            path: "XCFrameworks/sherpa-onnx.xcframework"
+        ),
+        .binaryTarget(
+            name: "ONNXRuntimeFramework",
+            path: "XCFrameworks/onnxruntime.xcframework"
         ),
         .testTarget(
             name: "SherpaONNXTTSTests",

@@ -587,15 +587,24 @@ for await chunk in stream {
    - Need to compile sherpa-onnx.xcframework
    - Need to compile onnxruntime.xcframework
    - Add as binary targets to Package.swift
+   - **Detailed plan**: See [sherpa_onnx_wrapper_implementation.md](./sherpa_onnx_wrapper_implementation.md)
 
-2. **Test Integration**
+2. **Implement Native Bridge**
+   - Create Objective-C++ bridge (SherpaONNXBridge.h/.mm)
+   - Replace mock implementation in SherpaONNXWrapper
+   - Properly call Sherpa-ONNX C API functions
+   - Handle memory management and thread safety
+
+3. **Test Integration**
    - Test with VoicePipelineManager
    - Verify model downloads work correctly
    - Test TTS synthesis with actual models
+   - Validate audio output format (Float32 PCM)
 
-3. **Polish**
-   - Update SherpaONNXWrapper when XCFramework is ready
-   - Add real voice synthesis instead of mock data
+4. **Polish**
+   - Add progress callbacks for synthesis
+   - Implement proper voice management
+   - Add streaming synthesis support
    - Performance optimization
 
 ## Next Steps
