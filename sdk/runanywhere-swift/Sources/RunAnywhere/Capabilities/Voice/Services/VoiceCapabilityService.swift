@@ -152,11 +152,68 @@ public class VoiceCapabilityService {
         return nil
     }
 
-    /// Find TTS service
+    /// Find TTS service based on configuration
     public func findTTSService() -> TextToSpeechService? {
         logger.debug("Finding TTS service")
 
+        // Check if TTS configuration is provided
+        if let ttsConfig = config?.voiceConfig?.tts {
+            return findTTSService(for: ttsConfig)
+        }
+
         // Return system TTS service by default
         return SystemTextToSpeechService()
+    }
+
+    /// Find TTS service for specific configuration
+    private func findTTSService(for config: VoiceTTSConfig) -> TextToSpeechService? {
+        switch config.provider {
+        case .system:
+            logger.debug("Using system TTS service")
+            return SystemTextToSpeechService()
+
+        case .sherpaONNX:
+            logger.debug("Attempting to use SherpaONNX TTS service")
+            // Try to dynamically load SherpaONNX module if available
+            if sdk.isSherpaONNXTTSAvailable {
+                logger.info("SherpaONNX TTS module is available")
+                // Use factory to create module instance
+                // Note: This is synchronous for now, async initialization will happen later
+                if let moduleService = createSherpaONNXTTSService() {
+                    return moduleService
+                } else {
+                    logger.warning("Failed to create SherpaONNX TTS service, falling back to system TTS")
+                    return SystemTextToSpeechService()
+                }
+            } else {
+                logger.warning("SherpaONNX TTS requested but module not available, falling back to system TTS")
+                return SystemTextToSpeechService()
+            }
+
+        case .custom:
+            logger.debug("Custom TTS provider requested")
+            // Future: Allow custom TTS implementations
+            return SystemTextToSpeechService()
+        }
+    }
+
+    /// Create SherpaONNX TTS service using dynamic loading
+    private func createSherpaONNXTTSService() -> TextToSpeechService? {
+        let className = "SherpaONNXTTS.SherpaONNXTTSService"
+
+        guard let moduleClass = NSClassFromString(className) as? NSObject.Type else {
+            logger.warning("Could not find class: \(className)")
+            return nil
+        }
+
+        // Create instance with SDK parameter
+        // The module's init expects an SDK instance
+        guard let service = moduleClass.init() as? TextToSpeechService else {
+            logger.warning("Could not create TTS service from class: \(className)")
+            return nil
+        }
+
+        logger.info("Successfully created SherpaONNX TTS service")
+        return service
     }
 }

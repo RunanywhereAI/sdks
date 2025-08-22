@@ -49,6 +49,10 @@ playground.xcworkspace
 #
 # Pods/
 
+# SherpaONNX TTS - Large binary frameworks (use setup_frameworks.sh to build)
+sdk/runanywhere-swift/Modules/SherpaONNXTTS/XCFrameworks/
+EXTERNAL/sherpa-onnx/
+
 # Carthage
 #
 # Add this line if you want to avoid checking in source code from Carthage dependencies.
