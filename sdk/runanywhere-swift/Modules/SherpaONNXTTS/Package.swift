@@ -4,10 +4,10 @@ import PackageDescription
 let package = Package(
     name: "SherpaONNXTTS",
     platforms: [
-        .iOS(.v13),
-        .macOS(.v10_15),
-        .tvOS(.v13),
-        .watchOS(.v6)
+        .iOS(.v15),
+        .macOS(.v12),
+        .tvOS(.v15),
+        .watchOS(.v8)
     ],
     products: [
         .library(
@@ -24,14 +24,22 @@ let package = Package(
             name: "SherpaONNXTTS",
             dependencies: [
                 .product(name: "RunAnywhereSDK", package: "runanywhere-swift"),
+                "SherpaONNXBridge"
+            ],
+            path: "Sources/SherpaONNXTTS"
+        ),
+        .target(
+            name: "SherpaONNXBridge",
+            dependencies: [
                 "SherpaONNXFramework",
                 "ONNXRuntimeFramework"
             ],
-            path: "Sources/SherpaONNXTTS",
-            publicHeadersPath: "Internal/Bridge",
+            path: "Sources/SherpaONNXBridge",
+            publicHeadersPath: ".",
             cxxSettings: [
-                .headerSearchPath("Internal/Bridge"),
-                .define("SHERPA_ONNX_AVAILABLE", .when(platforms: [.iOS, .macOS]))
+                .define("SHERPA_ONNX_AVAILABLE", .when(platforms: [.iOS, .macOS])),
+                .headerSearchPath("../../XCFrameworks/sherpa-onnx.xcframework/Headers"),
+                .headerSearchPath("../../XCFrameworks/onnxruntime.xcframework/Headers")
             ]
         ),
         // Binary targets for XCFrameworks

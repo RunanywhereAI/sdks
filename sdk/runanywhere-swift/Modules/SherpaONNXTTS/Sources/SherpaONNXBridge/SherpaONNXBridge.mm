@@ -7,10 +7,18 @@
 
 #import "SherpaONNXBridge.h"
 
-// Note: These headers will be available once XCFramework is built
-// For now, this is a template implementation
+// Import the headers from the XCFramework
 #ifdef SHERPA_ONNX_AVAILABLE
-#import <sherpa-onnx/c-api/c-api.h>
+// Use the C-style include since this is an XCFramework
+#include "sherpa-onnx/c-api/c-api.h"
+#else
+// Fallback when frameworks not available
+typedef void SherpaOnnxOfflineTts;
+typedef struct {
+    const float *samples;
+    int32_t n;
+    int32_t sample_rate;
+} SherpaOnnxGeneratedAudio;
 #endif
 
 #include <vector>
@@ -18,7 +26,7 @@
 
 @interface SherpaONNXBridge () {
 #ifdef SHERPA_ONNX_AVAILABLE
-    SherpaOnnxOfflineTts *tts;
+    const SherpaOnnxOfflineTts *tts;
 #else
     void *tts; // Placeholder when framework not available
 #endif
@@ -108,7 +116,6 @@
         config.model.matcha.data_dir = [dataDir UTF8String];
         config.model.matcha.length_scale = 1.0;
         config.model.matcha.noise_scale = 0.667;
-        config.model.matcha.noise_scale_w = 0.8;
 
     } else {
         NSLog(@"[SherpaONNXBridge] Unknown model type: %@", modelType);

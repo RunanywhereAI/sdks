@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import RunAnywhereSDK
+import SherpaONNXBridge
 import os
 
 /// Wrapper for Sherpa-ONNX native TTS engine
@@ -10,7 +11,7 @@ final class SherpaONNXWrapper {
     // MARK: - Properties
 
     private let configuration: SherpaONNXConfiguration
-    private var ttsHandle: OpaquePointer?
+    private var bridge: SherpaONNXBridge?
     private var isRunning = false
 
     private let queue = DispatchQueue(label: "com.runanywhere.sherpaonnx.wrapper")
@@ -34,14 +35,24 @@ final class SherpaONNXWrapper {
         return voices.first { $0.identifier == voiceId }
     }
 
+    var sampleRate: Int {
+        return bridge?.sampleRate ?? 16000
+    }
+
+    var numberOfSpeakers: Int {
+        return bridge?.numberOfSpeakers ?? 1
+    }
+
     // MARK: - Initialization
 
     init(configuration: SherpaONNXConfiguration) async throws {
         self.configuration = configuration
 
-        // TODO: Initialize native Sherpa-ONNX handle when XCFramework is ready
-        // For now, create mock voices
-        await initializeMockVoices()
+        // Initialize the native bridge
+        try await initializeBridge()
+
+        // Initialize voices based on the bridge capabilities
+        await initializeVoices()
 
         logger.info("SherpaONNXWrapper initialized with model type: \(configuration.modelType.rawValue)")
     }
@@ -59,14 +70,26 @@ final class SherpaONNXWrapper {
         pitch: Float,
         volume: Float
     ) async throws -> Data {
+        guard let bridge = bridge else {
+            throw SherpaONNXError.notInitialized
+        }
 
         return try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 do {
-                    // TODO: Call native Sherpa-ONNX synthesis
-                    // For now, return mock audio data
-                    let mockData = self.generateMockAudioData(for: text)
-                    continuation.resume(returning: mockData)
+                    // Use the selected voice ID or default to 0
+                    let speakerId = self.getSpeakerId(for: self.selectedVoiceId)
+
+                    // Call native Sherpa-ONNX synthesis through bridge
+                    guard let audioData = bridge.synthesizeText(
+                        text,
+                        speakerId: speakerId,
+                        speed: rate
+                    ) else {
+                        throw SherpaONNXError.synthesisFailure("Failed to generate audio")
+                    }
+
+                    continuation.resume(returning: audioData)
                 } catch {
                     continuation.resume(throwing: error)
                 }
@@ -84,23 +107,45 @@ final class SherpaONNXWrapper {
 
         AsyncThrowingStream { continuation in
             queue.async {
-                // TODO: Implement streaming synthesis with native code
-                // For now, chunk the mock data
-                let fullData = self.generateMockAudioData(for: text)
-                let chunkSize = 16000 // ~1 second at 16kHz
-
-                var offset = 0
-                while offset < fullData.count {
-                    let endIndex = min(offset + chunkSize, fullData.count)
-                    let chunk = fullData.subdata(in: offset..<endIndex)
-                    continuation.yield(chunk)
-                    offset = endIndex
-
-                    // Simulate processing delay
-                    Thread.sleep(forTimeInterval: 0.1)
+                guard let bridge = self.bridge else {
+                    continuation.finish(throwing: SherpaONNXError.notInitialized)
+                    return
                 }
 
-                continuation.finish()
+                do {
+                    let speakerId = self.getSpeakerId(for: self.selectedVoiceId)
+
+                    // Use the progress-based synthesis for streaming
+                    guard let audioData = bridge.synthesizeText(
+                        text,
+                        speakerId: speakerId,
+                        speed: rate,
+                        progress: { progress in
+                            // Could yield partial data here if bridge supported it
+                        }
+                    ) else {
+                        continuation.finish(throwing: SherpaONNXError.synthesisFailure("Failed to generate audio"))
+                        return
+                    }
+
+                    // For now, chunk the full audio data
+                    let chunkSize = 16000 * MemoryLayout<Float>.size // ~1 second at 16kHz
+
+                    var offset = 0
+                    while offset < audioData.count {
+                        let endIndex = min(offset + chunkSize, audioData.count)
+                        let chunk = audioData.subdata(in: offset..<endIndex)
+                        continuation.yield(chunk)
+                        offset = endIndex
+
+                        // Small delay to simulate real-time streaming
+                        Thread.sleep(forTimeInterval: 0.1)
+                    }
+
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
             }
         }
     }
@@ -140,18 +185,68 @@ final class SherpaONNXWrapper {
     /// Clean up resources
     func cleanup() {
         queue.sync {
-            if let handle = ttsHandle {
-                // TODO: Release native handle
-                _ = handle
-                ttsHandle = nil
-            }
+            bridge?.destroy()
+            bridge = nil
         }
         logger.debug("Wrapper cleaned up")
     }
 
     // MARK: - Private Methods
 
-    /// Initialize mock voices for testing
+    /// Initialize the native bridge
+    private func initializeBridge() async throws {
+        return try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                do {
+                    // Create the bridge with configuration
+                    let bridge = SherpaONNXBridge(
+                        modelPath: self.configuration.modelPath.path,
+                        modelType: self.configuration.modelType.rawValue,
+                        numThreads: self.configuration.numThreads,
+                        maxSentenceLength: self.configuration.maxSentenceLength
+                    )
+
+                    guard bridge != nil else {
+                        throw SherpaONNXError.notInitialized
+                    }
+
+                    self.bridge = bridge
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// Initialize voices based on bridge capabilities
+    private func initializeVoices() async {
+        guard let bridge = bridge else {
+            // Fallback to mock voices if bridge not available
+            await initializeMockVoices()
+            return
+        }
+
+        let numSpeakers = bridge.numberOfSpeakers
+        voices = []
+
+        // Create voice entries based on model type and speaker count
+        for speakerId in 0..<numSpeakers {
+            let voiceName = bridge.speakerName(forId: speakerId) ?? "Speaker \(speakerId + 1)"
+            let voice = VoiceInfo(
+                identifier: "speaker-\(speakerId)",
+                name: voiceName,
+                language: getLanguageForModelType(configuration.modelType),
+                gender: .neutral // Default to neutral since we don't have gender info from bridge
+            )
+            voices.append(voice)
+        }
+
+        // Select first voice by default
+        selectedVoiceId = voices.first?.identifier
+    }
+
+    /// Initialize mock voices for testing when bridge is not available
     private func initializeMockVoices() async {
         switch configuration.modelType {
         case .kitten:
@@ -168,6 +263,26 @@ final class SherpaONNXWrapper {
 
         // Select first voice by default
         selectedVoiceId = voices.first?.identifier
+    }
+
+    /// Get speaker ID for a voice identifier
+    private func getSpeakerId(for voiceId: String?) -> Int {
+        guard let voiceId = voiceId,
+              voiceId.hasPrefix("speaker-"),
+              let speakerId = Int(String(voiceId.dropFirst("speaker-".count))) else {
+            return 0 // Default to first speaker
+        }
+        return speakerId
+    }
+
+    /// Get default language for model type
+    private func getLanguageForModelType(_ modelType: SherpaONNXModelType) -> String {
+        switch modelType {
+        case .kitten, .vits, .matcha, .piper:
+            return "en-US"
+        case .kokoro:
+            return "en-US" // Kokoro supports multiple languages
+        }
     }
 
     private func createKittenVoices() -> [VoiceInfo] {
@@ -214,51 +329,4 @@ final class SherpaONNXWrapper {
         ]
     }
 
-    /// Generate mock audio data for testing
-    private func generateMockAudioData(for text: String) -> Data {
-        // Generate silent audio data at 16kHz, mono, Float32
-        let duration = Double(text.count) * 0.05 // Approximate duration based on text length
-        let sampleRate = 16000
-        let numSamples = Int(duration * Double(sampleRate))
-
-        var audioData = Data(capacity: numSamples * MemoryLayout<Float>.size)
-
-        // Generate a simple sine wave for testing
-        let frequency = 440.0 // A4 note
-        let amplitude: Float = 0.1
-
-        for i in 0..<numSamples {
-            let time = Double(i) / Double(sampleRate)
-            let sample = amplitude * sin(2.0 * .pi * frequency * time)
-            var floatSample = Float(sample)
-            audioData.append(Data(bytes: &floatSample, count: MemoryLayout<Float>.size))
-        }
-
-        return audioData
-    }
 }
-
-// MARK: - C Bridge Functions (Placeholder)
-
-// TODO: When XCFramework is ready, implement these C bridge functions
-// that will call the actual Sherpa-ONNX C API
-
-/*
-private func sherpa_onnx_create_tts(config: UnsafePointer<CChar>) -> OpaquePointer? {
-    // Call native function
-    return nil
-}
-
-private func sherpa_onnx_destroy_tts(handle: OpaquePointer) {
-    // Call native function
-}
-
-private func sherpa_onnx_synthesize(
-    handle: OpaquePointer,
-    text: UnsafePointer<CChar>,
-    voiceId: UnsafePointer<CChar>
-) -> UnsafePointer<Float>? {
-    // Call native function
-    return nil
-}
-*/
