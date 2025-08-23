@@ -84,7 +84,9 @@ public struct ModuleIntegrationHelper {
         // Use explicit filter to avoid Predicate type confusion
         var filteredModels: [ModelInfo] = []
         for model in allModels {
-            if case .custom(let fw) = model.framework, fw == framework {
+            if model.compatibleFrameworks.contains(where: { fw in
+                fw.rawValue == framework
+            }) {
                 filteredModels.append(model)
             }
         }

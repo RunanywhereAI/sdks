@@ -17,88 +17,73 @@ final class SherpaONNXDownloadStrategy: DownloadStrategy {
         return model.id.hasPrefix("sherpa-")
     }
 
+    public func download(
+        model: ModelInfo,
+        to destination: URL,
+        progressHandler: ((Double) -> Void)?
+    ) async throws -> URL {
+        logger.info("Starting download for model: \(model.id)")
+
+        let modelDir = destination.appendingPathComponent(model.id)
+        try FileManager.default.createDirectory(at: modelDir, withIntermediateDirectories: true)
+
+        let totalFiles = 1 + (model.alternativeDownloadURLs?.count ?? 0)
+        var completedFiles = 0
+
+        // Download main model file
+        guard let mainURL = model.downloadURL else {
+            throw SherpaONNXError.invalidConfiguration("No download URL for model \(model.id)")
+        }
+
+        let (mainData, mainResponse) = try await URLSession.shared.data(from: mainURL)
+        guard let httpResponse = mainResponse as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw SherpaONNXError.invalidConfiguration("Failed to download \(mainURL.lastPathComponent)")
+        }
+
+        let mainDestination = modelDir.appendingPathComponent(mainURL.lastPathComponent)
+        try mainData.write(to: mainDestination)
+        completedFiles += 1
+        progressHandler?(Double(completedFiles) / Double(totalFiles))
+
+        // Download additional files (voices, tokens, config)
+        if let altURLs = model.alternativeDownloadURLs {
+            for altURL in altURLs {
+                do {
+                    let (data, response) = try await URLSession.shared.data(from: altURL)
+                    guard let httpResponse = response as? HTTPURLResponse,
+                          httpResponse.statusCode == 200 else {
+                        logger.warning("Failed to download \(altURL.lastPathComponent), skipping")
+                        continue
+                    }
+
+                    let fileDestination = modelDir.appendingPathComponent(altURL.lastPathComponent)
+                    try data.write(to: fileDestination)
+                    completedFiles += 1
+                    progressHandler?(Double(completedFiles) / Double(totalFiles))
+                } catch {
+                    logger.warning("Failed to download \(altURL.lastPathComponent): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // Mark as complete
+        let markerPath = modelDir.appendingPathComponent(".download_complete")
+        try Data().write(to: markerPath)
+
+        logger.info("Download completed for model: \(model.id)")
+        return modelDir
+    }
+
     public func downloadModel(
         _ model: ModelInfo,
         using downloadManager: DownloadManager,
         to destination: URL
     ) async throws -> DownloadTask {
+        logger.info("Using SDK download manager for model: \(model.id)")
 
-        logger.info("Starting download for model: \(model.id)")
-
-        // Create model-specific directory
-        let modelDir = destination.appendingPathComponent(model.id)
-        try FileManager.default.createDirectory(
-            at: modelDir,
-            withIntermediateDirectories: true
-        )
-
-        // Download main model file
-        guard let mainURL = model.downloadURL else {
-            throw SherpaONNXError.invalidConfiguration("No download URL for model")
-        }
-
-        let mainFileName = mainURL.lastPathComponent
-        let mainDestination = modelDir.appendingPathComponent(mainFileName)
-
-        logger.debug("Downloading main model to: \(mainDestination.path)")
-        let mainTask = try await downloadManager.downloadFile(
-            from: mainURL,
-            to: mainDestination
-        )
-
-        // Download additional files if present
-        if let additionalURLs = model.alternativeDownloadURLs {
-            for url in additionalURLs {
-                let fileName = url.lastPathComponent
-                let fileDestination = modelDir.appendingPathComponent(fileName)
-
-                logger.debug("Downloading additional file: \(fileName)")
-
-                // Handle compressed files
-                if fileName.hasSuffix(".tar.gz") {
-                    let tempDestination = modelDir.appendingPathComponent("\(fileName).tmp")
-                    _ = try await downloadManager.downloadFile(
-                        from: url,
-                        to: tempDestination
-                    )
-
-                    // Extract tar.gz file
-                    try await extractTarGZ(from: tempDestination, to: modelDir)
-                    try FileManager.default.removeItem(at: tempDestination)
-                } else {
-                    _ = try await downloadManager.downloadFile(
-                        from: url,
-                        to: fileDestination
-                    )
-                }
-            }
-        }
-
-        // Create a marker file to indicate successful download
-        let markerPath = modelDir.appendingPathComponent(".download_complete")
-        try "".write(to: markerPath, atomically: true, encoding: .utf8)
-
-        logger.info("Successfully downloaded all files for model: \(model.id)")
-
-        return mainTask
-    }
-
-    /// Extract tar.gz file
-    private func extractTarGZ(from source: URL, to destination: URL) async throws {
-        logger.debug("Extracting: \(source.lastPathComponent)")
-
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
-        task.arguments = ["-xzf", source.path, "-C", destination.path]
-
-        try task.run()
-        task.waitUntilExit()
-
-        guard task.terminationStatus == 0 else {
-            throw SherpaONNXError.invalidConfiguration("Failed to extract tar.gz file")
-        }
-
-        logger.debug("Extraction complete")
+        // Use the SDK's download manager directly
+        return try await downloadManager.downloadModel(model)
     }
 
     /// Check if model is fully downloaded (all required files present)

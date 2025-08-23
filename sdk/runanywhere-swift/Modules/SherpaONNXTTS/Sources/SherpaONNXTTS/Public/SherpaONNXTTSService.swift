@@ -18,6 +18,13 @@ public final class SherpaONNXTTSService: TextToSpeechService {
     private var isInitialized = false
     private let queue = DispatchQueue(label: "com.runanywhere.sherpaonnxtts", attributes: .concurrent)
 
+    // Audio playback management
+    private var audioPlayer: AVAudioPlayer?
+    private var audioDelegate: AudioPlayerDelegate?
+    private var _isSpeaking = false
+    private var _isPaused = false
+    private let playbackQueue = DispatchQueue(label: "com.runanywhere.sherpaonnxtts.playback", qos: .userInitiated)
+
     private let logger = Logger(
         subsystem: "com.runanywhere.sdk",
         category: "SherpaONNXTTS"
@@ -32,8 +39,17 @@ public final class SherpaONNXTTSService: TextToSpeechService {
     }
 
     public var currentVoice: VoiceInfo? {
-        queue.sync {
-            wrapper?.currentVoice
+        get {
+            queue.sync {
+                wrapper?.currentVoice
+            }
+        }
+        set {
+            if let newVoice = newValue {
+                Task {
+                    try? await setVoice(newVoice.id)
+                }
+            }
         }
     }
 
@@ -107,22 +123,20 @@ public final class SherpaONNXTTSService: TextToSpeechService {
 
     // MARK: - TextToSpeechService Protocol
 
-    public func synthesize(text: String, options: TTSOptions?) async throws -> Data {
+    public func synthesize(text: String, options: TTSOptions) async throws -> Data {
         guard isInitialized, let wrapper = wrapper else {
             throw SherpaONNXError.notInitialized
         }
 
         logger.debug("Synthesizing text: \(text.prefix(50))...")
 
-        // Apply options if provided
-        if let options = options {
-            if let voiceId = options.voice {
-                try await setVoice(voiceId)
-            }
-            self.rate = options.rate ?? 1.0
-            self.pitch = options.pitch ?? 1.0
-            self.volume = options.volume ?? 1.0
+        // Apply options
+        if let voiceId = options.voice {
+            try await setVoice(voiceId)
         }
+        self.rate = options.rate
+        self.pitch = options.pitch
+        self.volume = options.volume
 
         // Generate audio using wrapper
         let audioData = try await wrapper.synthesize(
@@ -184,6 +198,13 @@ public final class SherpaONNXTTSService: TextToSpeechService {
     }
 
     public func stop() {
+        playbackQueue.async {
+            self.audioPlayer?.stop()
+            self.queue.async(flags: .barrier) {
+                self._isSpeaking = false
+                self._isPaused = false
+            }
+        }
         queue.async(flags: .barrier) {
             self.wrapper?.stop()
         }
@@ -191,6 +212,14 @@ public final class SherpaONNXTTSService: TextToSpeechService {
     }
 
     public func pause() {
+        playbackQueue.async {
+            if self.audioPlayer?.isPlaying == true {
+                self.audioPlayer?.pause()
+                self.queue.async(flags: .barrier) {
+                    self._isPaused = true
+                }
+            }
+        }
         queue.async(flags: .barrier) {
             self.wrapper?.pause()
         }
@@ -198,10 +227,62 @@ public final class SherpaONNXTTSService: TextToSpeechService {
     }
 
     public func resume() {
+        playbackQueue.async {
+            if self.queue.sync(execute: { self._isPaused }) {
+                self.audioPlayer?.play()
+                self.queue.async(flags: .barrier) {
+                    self._isPaused = false
+                    self._isSpeaking = true
+                }
+            }
+        }
         queue.async(flags: .barrier) {
             self.wrapper?.resume()
         }
         logger.debug("TTS resumed")
+    }
+
+    // MARK: - Additional Protocol Requirements
+
+    public func speak(text: String, options: TTSOptions) async throws {
+        logger.debug("Speaking text: \(text.prefix(50))...")
+
+        // First synthesize the audio
+        let audioData = try await synthesize(text: text, options: options)
+
+        // Play the synthesized audio
+        try await playAudio(data: audioData)
+    }
+
+    public var isSpeaking: Bool {
+        queue.sync {
+            _isSpeaking
+        }
+    }
+
+    public var isPaused: Bool {
+        queue.sync {
+            _isPaused
+        }
+    }
+
+    public func cleanup() async {
+        logger.debug("Cleaning up SherpaONNX TTS resources")
+
+        // Stop any ongoing playback
+        stop()
+
+        await withCheckedContinuation { continuation in
+            queue.async(flags: .barrier) {
+                self.wrapper = nil
+                self.audioPlayer = nil
+                self.audioDelegate = nil
+                self.isInitialized = false
+                self._isSpeaking = false
+                self._isPaused = false
+                continuation.resume()
+            }
+        }
     }
 
     // MARK: - Private Methods
@@ -227,11 +308,103 @@ public final class SherpaONNXTTSService: TextToSpeechService {
         }
     }
 
+    // MARK: - Audio Playback
+
+    private func playAudio(data: Data) async throws {
+        return try await withCheckedThrowingContinuation { continuation in
+            playbackQueue.async {
+                do {
+                    #if !os(macOS)
+                    // Configure audio session (iOS/tvOS/watchOS only)
+                    let audioSession = AVAudioSession.sharedInstance()
+                    try audioSession.setCategory(.playback, mode: .default)
+                    try audioSession.setActive(true)
+                    #endif
+
+                    // Create audio player
+                    self.audioPlayer = try AVAudioPlayer(data: data)
+
+                    // Create and retain delegate
+                    self.audioDelegate = AudioPlayerDelegate {
+                        // On completion
+                        self.queue.async(flags: .barrier) {
+                            self._isSpeaking = false
+                            self._isPaused = false
+                        }
+                        continuation.resume()
+                    } onError: { error in
+                        // On error
+                        self.queue.async(flags: .barrier) {
+                            self._isSpeaking = false
+                            self._isPaused = false
+                        }
+                        continuation.resume(throwing: error)
+                    }
+
+                    self.audioPlayer?.delegate = self.audioDelegate
+
+                    guard let player = self.audioPlayer else {
+                        throw SherpaONNXError.invalidConfiguration("Failed to create audio player")
+                    }
+
+                    // Update state and start playback
+                    self.queue.async(flags: .barrier) {
+                        self._isSpeaking = true
+                        self._isPaused = false
+                    }
+
+                    player.prepareToPlay()
+                    if !player.play() {
+                        throw SherpaONNXError.invalidConfiguration("Failed to start audio playback")
+                    }
+
+                    self.logger.debug("Started audio playback")
+
+                } catch {
+                    self.queue.async(flags: .barrier) {
+                        self._isSpeaking = false
+                        self._isPaused = false
+                    }
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     // MARK: - Module Lifecycle
 
     public func moduleWillTerminate() {
+        stop()
         wrapper?.cleanup()
         logger.info("Module terminating")
+    }
+}
+
+// MARK: - ModuleLifecycle Conformance
+
+// MARK: - Audio Player Delegate Helper
+
+private class AudioPlayerDelegate: NSObject, AVAudioPlayerDelegate {
+    private let onCompletion: () -> Void
+    private let onError: (Error) -> Void
+
+    init(onCompletion: @escaping () -> Void, onError: @escaping (Error) -> Void) {
+        self.onCompletion = onCompletion
+        self.onError = onError
+        super.init()
+    }
+
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if flag {
+            onCompletion()
+        } else {
+            onError(SherpaONNXError.invalidConfiguration("Audio playback failed"))
+        }
+    }
+
+    func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+        let playbackError = error ?? SherpaONNXError.invalidConfiguration("Audio decode error")
+        onError(playbackError)
     }
 }
 

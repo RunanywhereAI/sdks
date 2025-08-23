@@ -32,15 +32,15 @@ final class SherpaONNXWrapper {
 
     var currentVoice: VoiceInfo? {
         guard let voiceId = selectedVoiceId else { return nil }
-        return voices.first { $0.identifier == voiceId }
+        return voices.first { $0.id == voiceId }
     }
 
     var sampleRate: Int {
-        return bridge?.sampleRate ?? 16000
+        return bridge?.sampleRate() ?? 16000
     }
 
     var numberOfSpeakers: Int {
-        return bridge?.numberOfSpeakers ?? 1
+        return bridge?.numberOfSpeakers() ?? 1
     }
 
     // MARK: - Initialization
@@ -152,7 +152,7 @@ final class SherpaONNXWrapper {
 
     /// Set the active voice
     func setVoice(_ voiceIdentifier: String) async throws {
-        guard voices.contains(where: { $0.identifier == voiceIdentifier }) else {
+        guard voices.contains(where: { $0.id == voiceIdentifier }) else {
             throw SherpaONNXError.voiceNotFound(voiceIdentifier)
         }
 
@@ -231,10 +231,10 @@ final class SherpaONNXWrapper {
         voices = []
 
         // Create voice entries based on model type and speaker count
-        for speakerId in 0..<numSpeakers {
+        for speakerId in 0..<numSpeakers() {
             let voiceName = bridge.speakerName(forId: speakerId) ?? "Speaker \(speakerId + 1)"
             let voice = VoiceInfo(
-                identifier: "speaker-\(speakerId)",
+                id: "speaker-\(speakerId)",
                 name: voiceName,
                 language: getLanguageForModelType(configuration.modelType),
                 gender: .neutral // Default to neutral since we don't have gender info from bridge
@@ -243,7 +243,7 @@ final class SherpaONNXWrapper {
         }
 
         // Select first voice by default
-        selectedVoiceId = voices.first?.identifier
+        selectedVoiceId = voices.first?.id
     }
 
     /// Initialize mock voices for testing when bridge is not available
@@ -262,7 +262,7 @@ final class SherpaONNXWrapper {
         }
 
         // Select first voice by default
-        selectedVoiceId = voices.first?.identifier
+        selectedVoiceId = voices.first?.id
     }
 
     /// Get speaker ID for a voice identifier
@@ -287,45 +287,45 @@ final class SherpaONNXWrapper {
 
     private func createKittenVoices() -> [VoiceInfo] {
         return [
-            VoiceInfo(identifier: "expr-voice-1-f", name: "Expressive Female 1", language: "en-US", gender: .female),
-            VoiceInfo(identifier: "expr-voice-2-f", name: "Expressive Female 2", language: "en-US", gender: .female),
-            VoiceInfo(identifier: "expr-voice-3-m", name: "Expressive Male 1", language: "en-US", gender: .male),
-            VoiceInfo(identifier: "expr-voice-4-m", name: "Expressive Male 2", language: "en-US", gender: .male),
-            VoiceInfo(identifier: "neutral-voice-1-f", name: "Neutral Female", language: "en-US", gender: .female),
-            VoiceInfo(identifier: "neutral-voice-2-m", name: "Neutral Male", language: "en-US", gender: .male),
-            VoiceInfo(identifier: "happy-voice-f", name: "Happy Female", language: "en-US", gender: .female),
-            VoiceInfo(identifier: "calm-voice-m", name: "Calm Male", language: "en-US", gender: .male)
+            VoiceInfo(id: "expr-voice-1-f", name: "Expressive Female 1", language: "en-US", gender: .female),
+            VoiceInfo(id: "expr-voice-2-f", name: "Expressive Female 2", language: "en-US", gender: .female),
+            VoiceInfo(id: "expr-voice-3-m", name: "Expressive Male 1", language: "en-US", gender: .male),
+            VoiceInfo(id: "expr-voice-4-m", name: "Expressive Male 2", language: "en-US", gender: .male),
+            VoiceInfo(id: "neutral-voice-1-f", name: "Neutral Female", language: "en-US", gender: .female),
+            VoiceInfo(id: "neutral-voice-2-m", name: "Neutral Male", language: "en-US", gender: .male),
+            VoiceInfo(id: "happy-voice-f", name: "Happy Female", language: "en-US", gender: .female),
+            VoiceInfo(id: "calm-voice-m", name: "Calm Male", language: "en-US", gender: .male)
         ]
     }
 
     private func createKokoroVoices() -> [VoiceInfo] {
         return [
-            VoiceInfo(identifier: "kokoro-en-f-1", name: "Kokoro English Female 1", language: "en-US", gender: .female),
-            VoiceInfo(identifier: "kokoro-en-m-1", name: "Kokoro English Male 1", language: "en-US", gender: .male),
-            VoiceInfo(identifier: "kokoro-en-f-2", name: "Kokoro English Female 2", language: "en-US", gender: .female),
-            VoiceInfo(identifier: "kokoro-es-f", name: "Kokoro Spanish Female", language: "es-ES", gender: .female),
-            VoiceInfo(identifier: "kokoro-fr-f", name: "Kokoro French Female", language: "fr-FR", gender: .female),
-            VoiceInfo(identifier: "kokoro-de-m", name: "Kokoro German Male", language: "de-DE", gender: .male)
+            VoiceInfo(id: "kokoro-en-f-1", name: "Kokoro English Female 1", language: "en-US", gender: .female),
+            VoiceInfo(id: "kokoro-en-m-1", name: "Kokoro English Male 1", language: "en-US", gender: .male),
+            VoiceInfo(id: "kokoro-en-f-2", name: "Kokoro English Female 2", language: "en-US", gender: .female),
+            VoiceInfo(id: "kokoro-es-f", name: "Kokoro Spanish Female", language: "es-ES", gender: .female),
+            VoiceInfo(id: "kokoro-fr-f", name: "Kokoro French Female", language: "fr-FR", gender: .female),
+            VoiceInfo(id: "kokoro-de-m", name: "Kokoro German Male", language: "de-DE", gender: .male)
         ]
     }
 
     private func createVITSVoices() -> [VoiceInfo] {
         return [
-            VoiceInfo(identifier: "vits-lessac", name: "VITS Lessac", language: "en-US", gender: .neutral)
+            VoiceInfo(id: "vits-lessac", name: "VITS Lessac", language: "en-US", gender: .neutral)
         ]
     }
 
     private func createMatchaVoices() -> [VoiceInfo] {
         return [
-            VoiceInfo(identifier: "matcha-default", name: "Matcha Default", language: "en-US", gender: .neutral),
-            VoiceInfo(identifier: "matcha-expressive", name: "Matcha Expressive", language: "en-US", gender: .neutral)
+            VoiceInfo(id: "matcha-default", name: "Matcha Default", language: "en-US", gender: .neutral),
+            VoiceInfo(id: "matcha-expressive", name: "Matcha Expressive", language: "en-US", gender: .neutral)
         ]
     }
 
     private func createPiperVoices() -> [VoiceInfo] {
         return [
-            VoiceInfo(identifier: "piper-amy", name: "Amy", language: "en-US", gender: .female),
-            VoiceInfo(identifier: "piper-ryan", name: "Ryan", language: "en-US", gender: .male)
+            VoiceInfo(id: "piper-amy", name: "Amy", language: "en-US", gender: .female),
+            VoiceInfo(id: "piper-ryan", name: "Ryan", language: "en-US", gender: .male)
         ]
     }
 

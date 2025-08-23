@@ -19,6 +19,7 @@ class VoiceAssistantViewModel: ObservableObject {
     @Published var currentStatus = "Initializing..."
     @Published var currentLLMModel: String = ""
     @Published var whisperModel: String = "Whisper Base"
+    @Published var ttsModel: String = "SherpaONNX"
     @Published var isListening: Bool = false
 
     // Session state for UI
@@ -145,7 +146,11 @@ class VoiceAssistantViewModel: ObservableObject {
             vad: VADConfig(),
             stt: VoiceSTTConfig(modelId: whisperModelName),
             llm: VoiceLLMConfig(modelId: "default", systemPrompt: "You are a helpful voice assistant. Keep responses concise and conversational."),
-            tts: VoiceTTSConfig(voice: "system")
+            tts: VoiceTTSConfig.sherpaONNX(
+                modelId: "sherpa-kitten-nano-v0.1",
+                voice: "expr-voice-2-f",
+                rate: 1.0
+            )
         )
 
         // Create the pipeline

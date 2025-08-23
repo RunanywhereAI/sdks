@@ -75,7 +75,7 @@ public extension RunAnywhereSDK {
     /// Find appropriate TTS service
     func findTTSService() -> TextToSpeechService? {
         // Delegate to voice capability service
-        return serviceContainer.voiceCapabilityService.findTTSService()
+        return serviceContainer.voiceCapabilityService.findTTSService(for: nil)
     }
 
 }

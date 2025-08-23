@@ -49,7 +49,7 @@ public class VoiceCapabilityService {
             vadService: nil,
             voiceService: findVoiceService(for: config.stt?.modelId),
             llmService: findLLMService(for: config.llm?.modelId),
-            ttsService: findTTSService(),
+            ttsService: findTTSService(for: config.tts),
             speakerDiarization: nil,
             segmentationStrategy: nil
         )
@@ -153,11 +153,11 @@ public class VoiceCapabilityService {
     }
 
     /// Find TTS service based on configuration
-    public func findTTSService() -> TextToSpeechService? {
+    public func findTTSService(for ttsConfig: VoiceTTSConfig?) -> TextToSpeechService? {
         logger.debug("Finding TTS service")
 
         // Check if TTS configuration is provided
-        if let ttsConfig = config?.voiceConfig?.tts {
+        if let ttsConfig = ttsConfig {
             return findTTSService(for: ttsConfig)
         }
 
@@ -175,7 +175,7 @@ public class VoiceCapabilityService {
         case .sherpaONNX:
             logger.debug("Attempting to use SherpaONNX TTS service")
             // Try to dynamically load SherpaONNX module if available
-            if sdk.isSherpaONNXTTSAvailable {
+            if RunAnywhereSDK.shared.isSherpaONNXTTSAvailable {
                 logger.info("SherpaONNX TTS module is available")
                 // Use factory to create module instance
                 // Note: This is synchronous for now, async initialization will happen later

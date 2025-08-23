@@ -63,7 +63,7 @@ struct VoiceAssistantView: View {
                     HStack(spacing: 15) {
                         ModelBadge(icon: "brain", label: "LLM", value: viewModel.currentLLMModel.isEmpty ? "Loading..." : viewModel.currentLLMModel, color: .blue)
                         ModelBadge(icon: "waveform", label: "STT", value: viewModel.whisperModel, color: .green)
-                        ModelBadge(icon: "speaker.wave.2", label: "TTS", value: "System", color: .purple)
+                        ModelBadge(icon: "speaker.wave.2", label: "TTS", value: viewModel.ttsModel, color: .purple)
                     }
                     .padding(.horizontal, 20)
 
@@ -265,7 +265,7 @@ struct VoiceAssistantView: View {
                         // Compact model badges
                         ModelBadge(icon: "brain", label: "LLM", value: viewModel.currentLLMModel.isEmpty ? "Loading..." : viewModel.currentLLMModel, color: .blue)
                         ModelBadge(icon: "waveform", label: "STT", value: viewModel.whisperModel, color: .green)
-                        ModelBadge(icon: "speaker.wave.2", label: "TTS", value: "System", color: .purple)
+                        ModelBadge(icon: "speaker.wave.2", label: "TTS", value: viewModel.ttsModel, color: .purple)
                     }
                     .padding(.horizontal, 20)
 
