@@ -158,6 +158,8 @@ class FrameworkRecommender {
             return 0.85 // Optimized for speech recognition on Apple devices
         case .openAIWhisper:
             return 0.70 // Cloud-based, excellent accuracy
+        case .sherpaONNX:
+            return 0.80 // Optimized neural TTS with ONNX
         }
     }
 
@@ -190,6 +192,8 @@ class FrameworkRecommender {
             return 0.80 // Efficient on-device speech models
         case .openAIWhisper:
             return 0.50 // Cloud-based, no local memory usage
+        case .sherpaONNX:
+            return 0.75 // Efficient ONNX-based TTS models
         }
     }
 
@@ -221,6 +225,8 @@ class FrameworkRecommender {
             return 0.80 // Simple API for speech recognition
         case .openAIWhisper:
             return 0.85 // Very simple API, cloud-based
+        case .sherpaONNX:
+            return 0.75 // ONNX-based TTS, well-documented
         }
     }
 
@@ -252,6 +258,8 @@ class FrameworkRecommender {
             return 0.75 // Active community project
         case .openAIWhisper:
             return 0.90 // OpenAI-maintained, very stable
+        case .sherpaONNX:
+            return 0.80 // Stable ONNX-based TTS implementation
         }
     }
 

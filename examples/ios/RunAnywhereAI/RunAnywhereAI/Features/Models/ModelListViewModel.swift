@@ -165,6 +165,44 @@ class ModelListViewModel: ObservableObject {
             supportsThinking: false
         ),
 
+        // MARK: - ONNX TTS Models (SherpaONNX)
+
+        // Sherpa Kitten TTS Nano - Smallest, fastest TTS model (fixed URL)
+        ModelInfo(
+            id: "sherpa-kitten-nano-v0.1",
+            name: "Kitten TTS Nano (Sherpa-ONNX)",
+            format: .onnx,
+            downloadURL: URL(string: "https://huggingface.co/KittenML/kitten-tts-nano-0.1/resolve/main/kitten_tts_nano_v0_1.onnx"),
+            estimatedMemory: 50_000_000, // 50MB
+            contextLength: 0, // Not applicable for TTS models
+            downloadSize: 25_000_000, // ~25MB
+            compatibleFrameworks: [.sherpaONNX],
+            preferredFramework: .sherpaONNX,
+            metadata: ModelInfoMetadata(
+                tags: ["tts", "sherpa-onnx", "lightweight"],
+                description: "Lightweight neural TTS with 8 expressive voices"
+            ),
+            supportsThinking: false
+        ),
+
+        // Sherpa VITS English US - Verified working TTS model
+        ModelInfo(
+            id: "sherpa-vits-en-us-v1.0",
+            name: "VITS English US TTS (Piper)",
+            format: .onnx,
+            downloadURL: URL(string: "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx"),
+            estimatedMemory: 100_000_000, // 100MB
+            contextLength: 0, // Not applicable for TTS models
+            downloadSize: 63_200_000, // ~63.2MB (actual verified size)
+            compatibleFrameworks: [.sherpaONNX],
+            preferredFramework: .sherpaONNX,
+            metadata: ModelInfoMetadata(
+                tags: ["tts", "sherpa-onnx", "vits", "verified"],
+                description: "VITS-based TTS with natural prosody (verified working)"
+            ),
+            supportsThinking: false
+        ),
+
         // MARK: - LiquidAI Models
 
         // LiquidAI LFM2 350M Q4_K_M (Smallest, fastest)

@@ -42,6 +42,8 @@ extension LLMFramework {
         // Voice frameworks
         case .whisperKit, .openAIWhisper:
             return .voiceToText
+        case .sherpaONNX:
+            return .textToVoice
 
         // Text generation frameworks
         case .llamaCpp, .mlx, .mlc, .execuTorch, .picoLLM:
@@ -63,6 +65,8 @@ extension LLMFramework {
         // Voice-only frameworks
         case .whisperKit, .openAIWhisper:
             return [.voiceToText]
+        case .sherpaONNX:
+            return [.textToVoice]
 
         // Text-only frameworks
         case .llamaCpp, .mlx, .mlc, .execuTorch, .picoLLM:
